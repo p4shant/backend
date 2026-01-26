@@ -1,0 +1,16 @@
+{
+    "watch": [
+        "src",
+        "scripts",
+        "migrations",
+        ".env"
+    ],
+    "ext": "js,json",
+    "ignore": [
+        "node_modules"
+    ],
+    "exec": "node src/server.js",
+    "env": {
+        "NODE_ENV": "development"
+    }
+}
