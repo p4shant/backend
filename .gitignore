@@ -14,9 +14,6 @@ pnpm-debug.log*
 logs/
 *.log
 
-# Uploads (user-generated content)
-uploads/*/
-!uploads/.gitkeep
 
 # Build outputs
 dist/
