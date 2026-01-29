@@ -10,6 +10,7 @@ const transactionLogRoutes = require('./transactionLogRoutes');
 const plantInstallationDetailsRoutes = require('./plantInstallationDetailsRoutes');
 const employeeAttendanceRoutes = require('./employeeAttendanceRoutes');
 const attendanceRoutes = require('./attendanceRoutes');
+const schedulerRoutes = require('./schedulerRoutes');
 const { authenticate } = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -25,5 +26,6 @@ router.use('/transaction-logs', transactionLogRoutes);
 router.use('/plant-installation-details', plantInstallationDetailsRoutes);
 router.use('/employee-attendance', employeeAttendanceRoutes);
 router.use('/attendance', attendanceRoutes);
+router.use('/scheduler', schedulerRoutes);
 
 module.exports = router;
