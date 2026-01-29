@@ -18,9 +18,23 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" } // Allow cross-origin image loading
-}));
+app.use(
+    helmet({
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                imgSrc: ["'self'", "data:", "blob:", "https:"],
+                mediaSrc: ["'self'", "data:", "blob:", "https:"],
+                connectSrc: ["'self'", "https:"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "https:"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+            },
+        },
+    })
+);
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
