@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const { EMPLOYEE_ROLE_SET } = require('../constants/roles');
-const { hashPassword } = require('../utils/password');
+const { hashPassword, comparePassword } = require('../utils/password');
 
 function sanitize(row) {
     if (!row) return null;
@@ -162,6 +162,29 @@ async function remove(id) {
     return true;
 }
 
+async function changePassword(id, currentPassword, newPassword) {
+    const rows = await db.query('SELECT password_hash FROM employees WHERE id = ?', [id]);
+    if (rows.length === 0) {
+        const err = new Error('Employee not found');
+        err.status = 404;
+        throw err;
+    }
+
+    const employee = rows[0];
+    const isValid = await comparePassword(currentPassword, employee.password_hash);
+
+    if (!isValid) {
+        const err = new Error('Current password is incorrect');
+        err.status = 401;
+        throw err;
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    await db.query('UPDATE employees SET password_hash = ? WHERE id = ?', [newPasswordHash, id]);
+
+    return true;
+}
+
 module.exports = {
     list,
     getById,
@@ -171,5 +194,6 @@ module.exports = {
     findSingleByRole,
     create,
     update,
-    remove
+    remove,
+    changePassword
 };
