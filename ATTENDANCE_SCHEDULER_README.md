@@ -169,12 +169,12 @@ Use the manual trigger endpoint to test the scheduler:
 
 ```bash
 # Test for current date
-curl -X POST https://srv1304976.hstgr.cloud/api/scheduler/mark-absent \
+curl -X POST https://srv1304976.hstgr.cloud /api/scheduler/mark-absent \
   -H "Authorization: Bearer YOUR_MASTER_ADMIN_TOKEN" \
   -H "Content-Type: application/json"
 
 # Test for specific date
-curl -X POST https://srv1304976.hstgr.cloud/api/scheduler/mark-absent \
+curl -X POST https://srv1304976.hstgr.cloud /api/scheduler/mark-absent \
   -H "Authorization: Bearer YOUR_MASTER_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"date": "2026-01-28"}'
@@ -182,7 +182,7 @@ curl -X POST https://srv1304976.hstgr.cloud/api/scheduler/mark-absent \
 
 ### Check Scheduler Status
 ```bash
-curl https://srv1304976.hstgr.cloud/api/scheduler/status \
+curl https://srv1304976.hstgr.cloud /api/scheduler/status \
   -H "Authorization: Bearer YOUR_MASTER_ADMIN_TOKEN"
 ```
 

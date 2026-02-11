@@ -2,11 +2,22 @@ const db = require('../config/db');
 
 function computeIsLate(punchInTime) {
     if (!punchInTime) return 0;
+    // Parse UTC datetime string
+    // 10:30 AM IST = 05:00 AM UTC (IST is UTC+5:30)
+    // So if punch-in is after 05:00 UTC, it's considered late
     const d = new Date(punchInTime);
     if (isNaN(d.getTime())) return 0; // if invalid date, treat as not late
-    const hours = d.getHours();
-    const minutes = d.getMinutes();
-    return (hours > 10 || (hours === 10 && minutes > 30)) ? 1 : 0;
+
+    // Get UTC hours and minutes
+    const utcHours = d.getUTCHours();
+    const utcMinutes = d.getUTCMinutes();
+
+    // Check if punch-in time is after 05:00 UTC (which is 10:30 IST)
+    // Since we're comparing against 05:00, we can use a simple comparison
+    const punchTimeInMinutes = utcHours * 60 + utcMinutes;
+    const cutoffTimeInMinutes = 5 * 60; // 05:00 UTC = 300 minutes
+
+    return punchTimeInMinutes > cutoffTimeInMinutes ? 1 : 0;
 }
 
 function validateCreatePayload(data) {
@@ -75,8 +86,18 @@ async function listWithAbsentees(filters = {}) {
 
     console.log(`Total employees in database: ${allEmployees.length}`);
 
-    // STEP 2: Fetch attendance records ONLY for the specified date range
-    const targetDate = date_from || new Date().toISOString().split('T')[0];
+    // STEP 2: Fetch attendance records for the specified date range (IST)
+    // If no date_from is provided, use today's IST date
+    let targetDate = date_from;
+    if (!targetDate) {
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istDate = new Date(now.getTime() + istOffset);
+        const year = istDate.getUTCFullYear();
+        const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(istDate.getUTCDate()).padStart(2, '0');
+        targetDate = `${year}-${month}-${day}`;
+    }
 
     const attendanceQuery = `
         SELECT 

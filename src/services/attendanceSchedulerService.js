@@ -2,6 +2,15 @@ const db = require('../config/db');
 
 /**
  * Get current date in IST timezone (YYYY-MM-DD format)
+ * 
+ * NOTE: attendance_date field represents a calendar day in IST, not a UTC timestamp.
+ * This is necessary because:
+ * 1. Employees mark attendance based on their local calendar (IST)
+ * 2. The scheduler runs at 18:30 UTC (23:30 IST) to mark absent employees
+ * 3. The date must be consistent with how employees see their calendar day
+ * 
+ * This function performs UTC-to-IST conversion only for determining the calendar date,
+ * NOT for timestamp conversions (which stay in UTC per timezone rules).
  */
 function getCurrentDateIST() {
     const now = new Date();

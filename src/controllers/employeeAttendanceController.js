@@ -99,12 +99,20 @@ module.exports = {
     // New exports will be assigned below
 };
 
-// Helper to compute today's date string in local timezone (YYYY-MM-DD)
+// Get today's date in IST timezone (YYYY-MM-DD)
+// NOTE: attendance_date field represents a calendar day in IST, not a UTC timestamp.
+// This is necessary because employees mark attendance based on their local calendar (IST).
+// Timestamps (punch_in_time, punch_out_time) remain in UTC per timezone rules.
 function getTodayStr() {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    // Convert to IST (UTC+5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(istDate.getUTCDate()).padStart(2, '0');
+
     return `${year}-${month}-${day}`;
 }
 
@@ -116,6 +124,8 @@ async function getTodayStatus(req, res) {
 
         let total_hours = null;
         if (record?.punch_in_time && record?.punch_out_time) {
+            // Calculate hours difference from UTC datetime strings
+            // Timestamps already contain timezone info or are in UTC format
             const inTime = new Date(record.punch_in_time).getTime();
             const outTime = new Date(record.punch_out_time).getTime();
             total_hours = ((outTime - inTime) / (1000 * 60 * 60));
@@ -145,18 +155,17 @@ function buildAttendanceImageUrl(req, filename) {
     return `/uploads/attendance/${employeeId}/${filename}`;
 }
 
-function nowISTMySQL() {
-    const now = new Date();
-    const istMs = now.getTime() + (5.5 * 60 * 60 * 1000);
-    const ist = new Date(istMs);
-    const y = ist.getFullYear();
-    const m = String(ist.getMonth() + 1).padStart(2, '0');
-    const d = String(ist.getDate()).padStart(2, '0');
-    const hh = String(ist.getHours()).padStart(2, '0');
-    const mm = String(ist.getMinutes()).padStart(2, '0');
-    const ss = String(ist.getSeconds()).padStart(2, '0');
-    return { mysql: `${y}-${m}-${d} ${hh}:${mm}:${ss}`, hours: Number(hh), minutes: Number(mm) };
+function nowUTCMySQL() {
+    // Store UTC time in MySQL - frontend will convert to IST for display
+    const now = new Date(); // UTC internally
+    // Return ISO format (with Z) so database stores it correctly for parsing
+    const iso = now.toISOString();
+    const mysql = iso.slice(0, 19).replace('T', ' ');
+    const hours = now.getUTCHours();
+    const minutes = now.getUTCMinutes();
+    return { mysql, hours, minutes, iso };
 }
+
 
 async function punchIn(req, res) {
     // Handle upload first
@@ -176,10 +185,11 @@ async function punchIn(req, res) {
             }
 
             const location = req.body.location ? JSON.parse(req.body.location) : null;
-            const istNow = nowISTMySQL();
-            const punch_in_time = istNow.mysql;
+            const utcNow = nowUTCMySQL();
+            const punch_in_time = utcNow.iso; // Use ISO format for proper timezone awareness
             const imageUrl = req.file ? buildAttendanceImageUrl(req, req.file.filename) : null;
 
+            // Note: is_late will be calculated by the service based on punch_in_time
             const created = await attendanceService.create({
                 employee_id: employeeId,
                 attendance_date: today,
@@ -187,7 +197,7 @@ async function punchIn(req, res) {
                 punch_in_image_url: imageUrl,
                 punch_in_latitude: location?.latitude || null,
                 punch_in_longitude: location?.longitude || null,
-                is_late: (istNow.hours > 10 || (istNow.hours === 10 && istNow.minutes > 30)) ? 1 : 0,
+                // is_late will be computed by service from punch_in_time
                 forgot_to_punch_out: 1,
             });
 
@@ -214,8 +224,8 @@ async function punchOut(req, res) {
             }
 
             const location = req.body.location ? JSON.parse(req.body.location) : null;
-            const istNow = nowISTMySQL();
-            const punch_out_time = istNow.mysql;
+            const utcNow = nowUTCMySQL();
+            const punch_out_time = utcNow.iso; // Use ISO format for proper timezone awareness
             const imageUrl = req.file ? buildAttendanceImageUrl(req, req.file.filename) : null;
 
             const updated = await attendanceService.patchPunchOut(existing.id, {

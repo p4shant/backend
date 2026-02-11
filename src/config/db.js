@@ -11,8 +11,7 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: env.db.connectionLimit,
     queueLimit: 0,
-    // Force IPv4 to avoid IPv6 connection issues
-    family: 4
+    dateStrings: true
 });
 
 pool.on('connection', () => {
