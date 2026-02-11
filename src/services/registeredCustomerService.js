@@ -97,6 +97,17 @@ async function getById(id) {
 async function create(data) {
     validateRequiredFields(data);
 
+    // Check if customer with same mobile number already exists
+    const existingCustomer = await db.query(
+        'SELECT id, applicant_name FROM registered_customers WHERE mobile_number = ?',
+        [data.mobile_number]
+    );
+    if (existingCustomer.length > 0) {
+        const err = new Error(`Customer with mobile number ${data.mobile_number} already exists (Name: ${existingCustomer[0].applicant_name})`);
+        err.status = 409; // Conflict
+        throw err;
+    }
+
     // Validate employee exists
     const employee = await db.query('SELECT id FROM employees WHERE id = ?', [data.created_by]);
     if (employee.length === 0) {

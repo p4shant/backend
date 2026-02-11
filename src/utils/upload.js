@@ -13,6 +13,7 @@ function sanitizeName(str) {
 function sanitizeMobile(str) {
     return String(str || '').replace(/\D/g, '');
 }
+
 // const rootUploads = path.resolve(__dirname, '..', 'uploads');
 const rootUploads = '/var/www/uploads';
 
