@@ -62,9 +62,15 @@ async function list(filters = {}) {
     const total = countResult[0].total;
 
     const query = `
-    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role
+    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role,
+           ad.id as additional_documents_id,
+           ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
+           ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
+           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.logger_image_url,
+           ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     ${whereClause}
     ORDER BY rc.created_at DESC
     LIMIT ? OFFSET ?
@@ -85,13 +91,59 @@ async function list(filters = {}) {
 
 async function getById(id) {
     const query = `
-    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role, e.phone_number as created_by_phone
+    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role, e.phone_number as created_by_phone,
+           ad.id as additional_documents_id,
+           ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
+           ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
+           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.logger_image_url,
+           ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     WHERE rc.id = ?
   `;
     const rows = await db.query(query, [id]);
-    return rows[0] || null;
+    if (rows[0]) {
+        // Group additional documents into a nested object
+        const customer = { ...rows[0] };
+        customer.additional_documents = {
+            id: customer.additional_documents_id,
+            application_form: customer.application_form,
+            feasibility_form: customer.feasibility_form,
+            etoken_document: customer.etoken_document,
+            net_metering_document: customer.net_metering_document,
+            finance_quotation_document: customer.finance_quotation_document,
+            finance_digital_approval: customer.finance_digital_approval,
+            ubi_sanction_certificate_document: customer.ubi_sanction_certificate_document,
+            indent_document: customer.indent_document,
+            solar_panels_images_url: customer.solar_panels_images_url,
+            inverter_image_url: customer.inverter_image_url,
+            logger_image_url: customer.logger_image_url,
+            warranty_card_document: customer.warranty_card_document,
+            paybill_document: customer.paybill_document,
+            dcr_document: customer.dcr_document,
+            commissioning_document: customer.commissioning_document
+        };
+        // Clean up redundant fields
+        delete customer.additional_documents_id;
+        delete customer.application_form;
+        delete customer.feasibility_form;
+        delete customer.etoken_document;
+        delete customer.net_metering_document;
+        delete customer.finance_quotation_document;
+        delete customer.finance_digital_approval;
+        delete customer.ubi_sanction_certificate_document;
+        delete customer.indent_document;
+        delete customer.solar_panels_images_url;
+        delete customer.inverter_image_url;
+        delete customer.logger_image_url;
+        delete customer.warranty_card_document;
+        delete customer.paybill_document;
+        delete customer.dcr_document;
+        delete customer.commissioning_document;
+        return customer;
+    }
+    return null;
 }
 
 async function create(data) {
@@ -209,9 +261,15 @@ async function getByStatus(status) {
     }
 
     const query = `
-    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role
+    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role,
+           ad.id as additional_documents_id,
+           ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
+           ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
+           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.logger_image_url,
+           ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     WHERE rc.application_status = ?
     ORDER BY rc.created_at DESC
   `;
@@ -220,9 +278,15 @@ async function getByStatus(status) {
 
 async function getByEmployee(employeeId) {
     const query = `
-    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role
+    SELECT rc.*, e.name as created_by_name, e.employee_role as created_by_role,
+           ad.id as additional_documents_id,
+           ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
+           ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
+           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.logger_image_url,
+           ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     WHERE rc.created_by = ?
     ORDER BY rc.created_at DESC
   `;
