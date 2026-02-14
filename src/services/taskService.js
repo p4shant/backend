@@ -96,6 +96,24 @@ function structureTaskWithCustomerData(row) {
             created_by: row.created_by,
             created_at: row.customer_created_at,
             updated_at: row.customer_updated_at,
+            additional_documents_id: row.additional_documents_id,
+            additional_documents: row.additional_documents_id ? {
+                application_form: row.application_form,
+                feasibility_form: row.feasibility_form,
+                etoken_document: row.etoken_document,
+                net_metering_document: row.net_metering_document,
+                finance_quotation_document: row.finance_quotation_document,
+                finance_digital_approval: row.finance_digital_approval,
+                ubi_sanction_certificate_document: row.ubi_sanction_certificate_document,
+                indent_document: row.indent_document,
+                solar_panels_images_url: row.solar_panels_images_url,
+                inverter_image_url: row.inverter_image_url,
+                logger_image_url: row.logger_image_url,
+                warranty_card_document: row.warranty_card_document,
+                paybill_document: row.paybill_document,
+                dcr_document: row.dcr_document,
+                commissioning_document: row.commissioning_document
+            } : null,
             transaction_information: row.transaction_id ? {
                 id: row.transaction_id,
                 total_amount: row.transaction_total_amount,
@@ -212,6 +230,22 @@ async function list(filters = {}) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+            ad.id as additional_documents_id,
+            ad.application_form,
+            ad.feasibility_form,
+            ad.etoken_document,
+            ad.net_metering_document,
+            ad.finance_quotation_document,
+            ad.finance_digital_approval,
+            ad.ubi_sanction_certificate_document,
+            ad.indent_document,
+            ad.solar_panels_images_url,
+            ad.inverter_image_url,
+            ad.logger_image_url,
+            ad.warranty_card_document,
+            ad.paybill_document,
+            ad.dcr_document,
+            ad.commissioning_document,
       tl.id as transaction_id,
       tl.total_amount as transaction_total_amount,
       tl.paid_amount as transaction_paid_amount,
@@ -221,6 +255,7 @@ async function list(filters = {}) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     ${whereClause}
     ORDER BY t.created_at DESC
@@ -297,6 +332,22 @@ async function getById(id) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+            ad.id as additional_documents_id,
+            ad.application_form,
+            ad.feasibility_form,
+            ad.etoken_document,
+            ad.net_metering_document,
+            ad.finance_quotation_document,
+            ad.finance_digital_approval,
+            ad.ubi_sanction_certificate_document,
+            ad.indent_document,
+            ad.solar_panels_images_url,
+            ad.inverter_image_url,
+            ad.logger_image_url,
+            ad.warranty_card_document,
+            ad.paybill_document,
+            ad.dcr_document,
+            ad.commissioning_document,
       tl.id as transaction_id,
       tl.total_amount as transaction_total_amount,
       tl.paid_amount as transaction_paid_amount,
@@ -306,6 +357,7 @@ async function getById(id) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.id = ?
   `;
@@ -618,6 +670,22 @@ async function getByStatus(status) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+            ad.id as additional_documents_id,
+            ad.application_form,
+            ad.feasibility_form,
+            ad.etoken_document,
+            ad.net_metering_document,
+            ad.finance_quotation_document,
+            ad.finance_digital_approval,
+            ad.ubi_sanction_certificate_document,
+            ad.indent_document,
+            ad.solar_panels_images_url,
+            ad.inverter_image_url,
+            ad.logger_image_url,
+            ad.warranty_card_document,
+            ad.paybill_document,
+            ad.dcr_document,
+            ad.commissioning_document,
       tl.id as transaction_id,
       tl.total_amount as transaction_total_amount,
       tl.paid_amount as transaction_paid_amount,
@@ -627,6 +695,7 @@ async function getByStatus(status) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.status = ?
     ORDER BY t.created_at DESC
@@ -691,6 +760,22 @@ async function getByEmployee(employeeId) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+            ad.id as additional_documents_id,
+            ad.application_form,
+            ad.feasibility_form,
+            ad.etoken_document,
+            ad.net_metering_document,
+            ad.finance_quotation_document,
+            ad.finance_digital_approval,
+            ad.ubi_sanction_certificate_document,
+            ad.indent_document,
+            ad.solar_panels_images_url,
+            ad.inverter_image_url,
+            ad.logger_image_url,
+            ad.warranty_card_document,
+            ad.paybill_document,
+            ad.dcr_document,
+            ad.commissioning_document,
       tl.id as transaction_id,
       tl.total_amount as transaction_total_amount,
       tl.paid_amount as transaction_paid_amount,
@@ -700,6 +785,7 @@ async function getByEmployee(employeeId) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.assigned_to_id = ?
     ORDER BY t.created_at DESC
@@ -764,6 +850,22 @@ async function getByCustomer(customerId) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+            ad.id as additional_documents_id,
+            ad.application_form,
+            ad.feasibility_form,
+            ad.etoken_document,
+            ad.net_metering_document,
+            ad.finance_quotation_document,
+            ad.finance_digital_approval,
+            ad.ubi_sanction_certificate_document,
+            ad.indent_document,
+            ad.solar_panels_images_url,
+            ad.inverter_image_url,
+            ad.logger_image_url,
+            ad.warranty_card_document,
+            ad.paybill_document,
+            ad.dcr_document,
+            ad.commissioning_document,
       tl.id as transaction_id,
       tl.total_amount as transaction_total_amount,
       tl.paid_amount as transaction_paid_amount,
@@ -773,6 +875,7 @@ async function getByCustomer(customerId) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.registered_customer_id = ?
     ORDER BY t.created_at DESC

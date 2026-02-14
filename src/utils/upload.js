@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const env = require('../config/env');
 
 function sanitizeName(str) {
     return String(str || '')
@@ -14,8 +15,7 @@ function sanitizeMobile(str) {
     return String(str || '').replace(/\D/g, '');
 }
 
-// const rootUploads = path.resolve(__dirname, '..', 'uploads');
-const rootUploads = '/var/www/uploads';
+const rootUploads = env.uploadsRoot;
 
 function ensureDir(dirPath) {
     if (!fs.existsSync(dirPath)) {

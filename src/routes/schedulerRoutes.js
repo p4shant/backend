@@ -126,7 +126,7 @@ router.get('/status', authenticate, (req, res) => {
             apiAccess: {
                 requiresAuth: true,
                 requiresRole: 'Master Admin',
-                testCommand: 'curl -X POST https://srv1304976.hstgr.cloud/api/scheduler/mark-absent -H "Authorization: Bearer YOUR_TOKEN"'
+                testCommand: 'curl -X POST http://localhost:3000/api/scheduler/mark-absent -H "Authorization: Bearer YOUR_TOKEN"'
             }
         });
     } catch (err) {
