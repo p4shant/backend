@@ -87,6 +87,15 @@ async function recordPayment(req, res) {
     }
 }
 
+async function getPaymentTracking(req, res) {
+    try {
+        const rows = await service.getPaymentTracking();
+        return res.json(rows);
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to fetch payment tracking' });
+    }
+}
+
 module.exports = {
     list,
     getById,
@@ -95,5 +104,6 @@ module.exports = {
     partialUpdate,
     remove,
     getByCustomer,
-    recordPayment
+    recordPayment,
+    getPaymentTracking
 };
