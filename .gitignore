@@ -45,3 +45,6 @@ coverage/
 *.sqlite
 *.sqlite3
 *.db
+
+# Upload folder
+uploads/
