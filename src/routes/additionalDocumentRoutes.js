@@ -4,12 +4,13 @@ const path = require('path');
 const fs = require('fs');
 const controller = require('../controllers/additionalDocumentController');
 const { authenticate } = require('../middleware/authMiddleware');
+const env = require('../config/env');
 
 const router = Router();
 router.use(authenticate);
 
 // Custom storage configuration for finance documents
-const rootUploads = path.resolve(__dirname, '../../uploads');
+const rootUploads = env.uploadsRoot;
 
 function sanitizeName(str) {
     return String(str || '')
