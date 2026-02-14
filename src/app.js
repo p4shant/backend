@@ -40,7 +40,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
 // Ensure uploads directory exists and serve it statically
-const uploadsDir = path.resolve(__dirname, '..', 'uploads');
+const uploadsDir = env.uploadsRoot;
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
