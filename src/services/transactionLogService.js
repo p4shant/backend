@@ -164,6 +164,37 @@ async function recordPayment(customerId, amount, proofUrl) {
     }
 }
 
+async function getPaymentTracking() {
+    const query = `
+        SELECT 
+            tl.id,
+            tl.registered_customer_id,
+            rc.applicant_name AS customer_name,
+            rc.district,
+            rc.plant_size_kw,
+            rc.payment_mode,
+            tl.total_amount,
+            tl.paid_amount,
+            (tl.total_amount - tl.paid_amount) AS remaining_amount,
+            e.name AS sales_person_name,
+            e.phone_number AS sales_person_mobile,
+            CASE 
+                WHEN tl.paid_amount = 0 THEN 'Pending'
+                WHEN tl.paid_amount > 0 AND tl.paid_amount < tl.total_amount THEN 'In Progress'
+                WHEN tl.paid_amount >= tl.total_amount THEN 'Completed'
+                ELSE 'Pending'
+            END AS status,
+            tl.created_at,
+            tl.updated_at
+        FROM transaction_logs tl
+        INNER JOIN registered_customers rc ON tl.registered_customer_id = rc.id
+        INNER JOIN employees e ON rc.created_by = e.id
+        ORDER BY tl.created_at DESC
+    `;
+    const rows = await db.query(query);
+    return rows;
+}
+
 module.exports = {
     list,
     getById,
@@ -172,5 +203,6 @@ module.exports = {
     partialUpdate,
     remove,
     getByCustomer,
-    recordPayment
+    recordPayment,
+    getPaymentTracking
 };

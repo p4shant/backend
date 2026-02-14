@@ -7,6 +7,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', controller.list);
+router.get('/payment-tracking', controller.getPaymentTracking);
 router.get('/:id', controller.getById);
 router.get('/customer/:registered_customer_id', controller.getByCustomer);
 router.post('/', controller.create);
