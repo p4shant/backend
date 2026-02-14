@@ -1,4 +1,5 @@
 const dotenv = require('dotenv');
+const path = require('path');
 
 // Load environment variables early
 dotenv.config();
@@ -25,7 +26,8 @@ const env = {
     },
     logging: {
         level: process.env.LOG_LEVEL || 'info'
-    }
+    },
+    uploadsRoot: process.env.UPLOADS_ROOT || path.resolve(__dirname, '..', 'uploads')
 };
 
 module.exports = env;
