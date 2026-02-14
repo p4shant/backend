@@ -195,7 +195,7 @@ async function create(data) {
         'installation_date_feasible',
         'application_status',
         'aadhaar_front_url', 'aadhaar_back_url', 'pan_card_url', 'electric_bill_url',
-        'smart_meter_doc_url', 'cancel_cheque_url', 'bank_details_doc_url',
+        'ceiling_paper_photo_url', 'cancel_cheque_url', 'site_image_gps_url',
         'cot_death_certificate_url', 'cot_house_papers_url', 'cot_passport_photo_url',
         'cot_family_registration_url', 'cot_aadhaar_photos_urls', 'cot_live_aadhaar_1_url', 'cot_live_aadhaar_2_url',
         'created_by'

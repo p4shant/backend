@@ -83,9 +83,9 @@ function structureTaskWithCustomerData(row) {
             aadhaar_back_url: row.aadhaar_back_url,
             pan_card_url: row.pan_card_url,
             electric_bill_url: row.electric_bill_url,
-            smart_meter_doc_url: row.smart_meter_doc_url,
+            ceiling_paper_photo_url: row.ceiling_paper_photo_url,
             cancel_cheque_url: row.cancel_cheque_url,
-            bank_details_doc_url: row.bank_details_doc_url,
+            site_image_gps_url: row.site_image_gps_url,
             cot_death_certificate_url: row.cot_death_certificate_url,
             cot_house_papers_url: row.cot_house_papers_url,
             cot_passport_photo_url: row.cot_passport_photo_url,
@@ -96,6 +96,12 @@ function structureTaskWithCustomerData(row) {
             created_by: row.created_by,
             created_at: row.customer_created_at,
             updated_at: row.customer_updated_at,
+            created_by_info: {
+                id: row.created_by,
+                name: row.creator_name,
+                role: row.creator_role,
+                phone_number: row.creator_phone
+            },
             additional_documents_id: row.additional_documents_id,
             additional_documents: row.additional_documents_id ? {
                 application_form: row.application_form,
@@ -217,9 +223,9 @@ async function list(filters = {}) {
       rc.aadhaar_back_url,
       rc.pan_card_url,
       rc.electric_bill_url,
-      rc.smart_meter_doc_url,
+      rc.ceiling_paper_photo_url,
       rc.cancel_cheque_url,
-      rc.bank_details_doc_url,
+    rc.site_image_gps_url,
       rc.cot_death_certificate_url,
       rc.cot_house_papers_url,
       rc.cot_passport_photo_url,
@@ -230,6 +236,9 @@ async function list(filters = {}) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+      e.name as creator_name,
+      e.employee_role as creator_role,
+      e.phone_number as creator_phone,
             ad.id as additional_documents_id,
             ad.application_form,
             ad.feasibility_form,
@@ -255,6 +264,7 @@ async function list(filters = {}) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+    LEFT JOIN employees e ON rc.created_by = e.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     ${whereClause}
@@ -319,9 +329,9 @@ async function getById(id) {
       rc.aadhaar_back_url,
       rc.pan_card_url,
       rc.electric_bill_url,
-      rc.smart_meter_doc_url,
+      rc.ceiling_paper_photo_url,
       rc.cancel_cheque_url,
-      rc.bank_details_doc_url,
+    rc.site_image_gps_url,
       rc.cot_death_certificate_url,
       rc.cot_house_papers_url,
       rc.cot_passport_photo_url,
@@ -332,6 +342,9 @@ async function getById(id) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+      e.name as creator_name,
+      e.employee_role as creator_role,
+      e.phone_number as creator_phone,
             ad.id as additional_documents_id,
             ad.application_form,
             ad.feasibility_form,
@@ -357,6 +370,7 @@ async function getById(id) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+    LEFT JOIN employees e ON rc.created_by = e.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.id = ?
@@ -657,9 +671,9 @@ async function getByStatus(status) {
       rc.aadhaar_back_url,
       rc.pan_card_url,
       rc.electric_bill_url,
-      rc.smart_meter_doc_url,
+      rc.ceiling_paper_photo_url,
       rc.cancel_cheque_url,
-      rc.bank_details_doc_url,
+    rc.site_image_gps_url,
       rc.cot_death_certificate_url,
       rc.cot_house_papers_url,
       rc.cot_passport_photo_url,
@@ -670,6 +684,9 @@ async function getByStatus(status) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+      e.name as creator_name,
+      e.employee_role as creator_role,
+      e.phone_number as creator_phone,
             ad.id as additional_documents_id,
             ad.application_form,
             ad.feasibility_form,
@@ -695,6 +712,7 @@ async function getByStatus(status) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+    LEFT JOIN employees e ON rc.created_by = e.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.status = ?
@@ -747,9 +765,9 @@ async function getByEmployee(employeeId) {
       rc.aadhaar_back_url,
       rc.pan_card_url,
       rc.electric_bill_url,
-      rc.smart_meter_doc_url,
+      rc.ceiling_paper_photo_url,
       rc.cancel_cheque_url,
-      rc.bank_details_doc_url,
+    rc.site_image_gps_url,
       rc.cot_death_certificate_url,
       rc.cot_house_papers_url,
       rc.cot_passport_photo_url,
@@ -760,6 +778,9 @@ async function getByEmployee(employeeId) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+      e.name as creator_name,
+      e.employee_role as creator_role,
+      e.phone_number as creator_phone,
             ad.id as additional_documents_id,
             ad.application_form,
             ad.feasibility_form,
@@ -785,6 +806,7 @@ async function getByEmployee(employeeId) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+    LEFT JOIN employees e ON rc.created_by = e.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.assigned_to_id = ?
@@ -837,9 +859,9 @@ async function getByCustomer(customerId) {
       rc.aadhaar_back_url,
       rc.pan_card_url,
       rc.electric_bill_url,
-      rc.smart_meter_doc_url,
+      rc.ceiling_paper_photo_url,
       rc.cancel_cheque_url,
-      rc.bank_details_doc_url,
+    rc.site_image_gps_url,
       rc.cot_death_certificate_url,
       rc.cot_house_papers_url,
       rc.cot_passport_photo_url,
@@ -850,6 +872,9 @@ async function getByCustomer(customerId) {
       rc.created_by,
       rc.created_at as customer_created_at,
       rc.updated_at as customer_updated_at,
+      e.name as creator_name,
+      e.employee_role as creator_role,
+      e.phone_number as creator_phone,
             ad.id as additional_documents_id,
             ad.application_form,
             ad.feasibility_form,
@@ -875,6 +900,7 @@ async function getByCustomer(customerId) {
       tl.updated_at as transaction_updated_at
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+    LEFT JOIN employees e ON rc.created_by = e.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.registered_customer_id = ?

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS registered_customers (
   -- Applicant Basic Info
   applicant_name VARCHAR(150) NOT NULL,
   mobile_number VARCHAR(20) NOT NULL,
-  email_id VARCHAR(150) NULL,
+  email_id VARCHAR(150) NOT NULL,
 
   -- Solar System Details
   solar_plant_type ENUM('Residential', 'Commercial', 'Industrial') NOT NULL DEFAULT 'Residential',
@@ -62,9 +62,9 @@ CREATE TABLE IF NOT EXISTS registered_customers (
   aadhaar_back_url TEXT NULL,
   pan_card_url TEXT NULL,
   electric_bill_url TEXT NULL,
-  smart_meter_doc_url TEXT NULL,
+  ceiling_paper_photo_url TEXT NULL,
   cancel_cheque_url TEXT NULL,
-  bank_details_doc_url TEXT NULL,
+  site_image_gps_url TEXT NULL,
 
   -- COT Document URLs
   cot_death_certificate_url TEXT NULL,
