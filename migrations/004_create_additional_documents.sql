@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS additional_documents (
   indent_document TEXT NULL,
   solar_panels_images_url TEXT NULL, -- JSON array of URLs
   inverter_image_url TEXT NULL,
-  logger_image_url TEXT NULL,
+  applicant_with_panel_image_url TEXT NULL,
+  applicant_with_invertor_image_url TEXT NULL,
   warranty_card_document TEXT NULL,
   paybill_document TEXT NULL,
   dcr_document TEXT NULL,
