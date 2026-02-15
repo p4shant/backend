@@ -43,7 +43,7 @@ async function create(data) {
         'registered_customer_id',
         'application_form', 'feasibility_form', 'etoken_document', 'net_metering_document',
         'finance_quotation_document', 'finance_digital_approval', 'ubi_sanction_certificate_document', 'indent_document',
-        'solar_panels_images_url', 'inverter_image_url', 'logger_image_url', 'warranty_card_document', 'paybill_document',
+        'solar_panels_images_url', 'inverter_image_url', 'applicant_with_panel_image_url', 'applicant_with_invertor_image_url', 'warranty_card_document', 'paybill_document',
         'dcr_document', 'commissioning_document'
     ];
     const values = fields.map(f => (data[f] !== undefined ? data[f] : null));
@@ -297,6 +297,144 @@ async function uploadDcrDocument(customerId, dcrDocumentUrl) {
     };
 }
 
+async function uploadSolarPanelImages(customerId, solarPanelImagesUrls) {
+    await validateCustomer(customerId);
+
+    const existing = await db.query(
+        'SELECT id, solar_panels_images_url FROM additional_documents WHERE registered_customer_id = ?',
+        [customerId]
+    );
+
+    let mergedUrls = Array.isArray(solarPanelImagesUrls) ? [...solarPanelImagesUrls] : [];
+    if (existing.length > 0 && existing[0].solar_panels_images_url) {
+        try {
+            const currentUrls = JSON.parse(existing[0].solar_panels_images_url);
+            if (Array.isArray(currentUrls)) {
+                mergedUrls = [...currentUrls, ...mergedUrls];
+            }
+        } catch {
+            // ignore parse errors and keep new URLs only
+        }
+    }
+
+    const urlsJson = JSON.stringify(mergedUrls);
+
+    if (existing.length > 0) {
+        await db.query(
+            'UPDATE additional_documents SET solar_panels_images_url = ? WHERE registered_customer_id = ?',
+            [urlsJson, customerId]
+        );
+        return {
+            success: true,
+            message: 'Solar panel images uploaded successfully',
+            data: { solar_panels_images_url: mergedUrls }
+        };
+    } else {
+        await db.query(
+            'INSERT INTO additional_documents (registered_customer_id, solar_panels_images_url) VALUES (?, ?)',
+            [customerId, urlsJson]
+        );
+        return {
+            success: true,
+            message: 'Solar panel images uploaded successfully',
+            data: { solar_panels_images_url: mergedUrls }
+        };
+    }
+}
+
+async function uploadApplicantWithPanelImage(customerId, applicantWithPanelImageUrl) {
+    await validateCustomer(customerId);
+
+    const existing = await db.query(
+        'SELECT id FROM additional_documents WHERE registered_customer_id = ?',
+        [customerId]
+    );
+
+    if (existing.length > 0) {
+        await db.query(
+            'UPDATE additional_documents SET applicant_with_panel_image_url = ? WHERE registered_customer_id = ?',
+            [applicantWithPanelImageUrl, customerId]
+        );
+        return {
+            success: true,
+            message: 'Applicant with panel image uploaded successfully',
+            data: { applicant_with_panel_image_url: applicantWithPanelImageUrl }
+        };
+    } else {
+        await db.query(
+            'INSERT INTO additional_documents (registered_customer_id, applicant_with_panel_image_url) VALUES (?, ?)',
+            [customerId, applicantWithPanelImageUrl]
+        );
+        return {
+            success: true,
+            message: 'Applicant with panel image uploaded successfully',
+            data: { applicant_with_panel_image_url: applicantWithPanelImageUrl }
+        };
+    }
+}
+
+async function uploadInvertorImage(customerId, invertorImageUrl) {
+    await validateCustomer(customerId);
+
+    const existing = await db.query(
+        'SELECT id FROM additional_documents WHERE registered_customer_id = ?',
+        [customerId]
+    );
+
+    if (existing.length > 0) {
+        await db.query(
+            'UPDATE additional_documents SET inverter_image_url = ? WHERE registered_customer_id = ?',
+            [invertorImageUrl, customerId]
+        );
+        return {
+            success: true,
+            message: 'Invertor image uploaded successfully',
+            data: { inverter_image_url: invertorImageUrl }
+        };
+    } else {
+        await db.query(
+            'INSERT INTO additional_documents (registered_customer_id, inverter_image_url) VALUES (?, ?)',
+            [customerId, invertorImageUrl]
+        );
+        return {
+            success: true,
+            message: 'Invertor image uploaded successfully',
+            data: { inverter_image_url: invertorImageUrl }
+        };
+    }
+}
+
+async function uploadApplicantWithInvertorImage(customerId, applicantWithInvertorImageUrl) {
+    await validateCustomer(customerId);
+
+    const existing = await db.query(
+        'SELECT id FROM additional_documents WHERE registered_customer_id = ?',
+        [customerId]
+    );
+
+    if (existing.length > 0) {
+        await db.query(
+            'UPDATE additional_documents SET applicant_with_invertor_image_url = ? WHERE registered_customer_id = ?',
+            [applicantWithInvertorImageUrl, customerId]
+        );
+        return {
+            success: true,
+            message: 'Applicant with invertor image uploaded successfully',
+            data: { applicant_with_invertor_image_url: applicantWithInvertorImageUrl }
+        };
+    } else {
+        await db.query(
+            'INSERT INTO additional_documents (registered_customer_id, applicant_with_invertor_image_url) VALUES (?, ?)',
+            [customerId, applicantWithInvertorImageUrl]
+        );
+        return {
+            success: true,
+            message: 'Applicant with invertor image uploaded successfully',
+            data: { applicant_with_invertor_image_url: applicantWithInvertorImageUrl }
+        };
+    }
+}
+
 module.exports = {
     list,
     getById,
@@ -311,4 +449,8 @@ module.exports = {
     uploadPaybillDocument,
     uploadWarrantyDocument,
     uploadDcrDocument,
+    uploadSolarPanelImages,
+    uploadApplicantWithPanelImage,
+    uploadInvertorImage,
+    uploadApplicantWithInvertorImage,
 };

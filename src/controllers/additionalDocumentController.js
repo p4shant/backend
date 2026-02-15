@@ -179,6 +179,92 @@ async function uploadDcrDocument(req, res) {
     }
 }
 
+async function uploadSolarPanelImages(req, res) {
+    try {
+        const customerId = Number(req.params.registered_customer_id);
+        const files = req.files;
+        const uploadedFiles = Array.isArray(files)
+            ? files
+            : files?.solar_panels_images || [];
+
+        if (!uploadedFiles.length) {
+            return res.status(400).json({ message: 'At least one solar panel image is required' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}/uploads`;
+        const customerFolder = req.uploadContext?.customerFolder || 'unknown';
+
+        const imageUrls = uploadedFiles.map(
+            file => `${baseUrl}/${customerFolder}/${file.filename}`
+        );
+
+        const result = await service.uploadSolarPanelImages(customerId, imageUrls);
+        return res.json(result);
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to upload images' });
+    }
+}
+
+async function uploadApplicantWithPanelImage(req, res) {
+    try {
+        const customerId = Number(req.params.registered_customer_id);
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ message: 'Applicant with panel image is required' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}/uploads`;
+        const customerFolder = req.uploadContext?.customerFolder || 'unknown';
+        const imageUrl = `${baseUrl}/${customerFolder}/${file.filename}`;
+
+        const result = await service.uploadApplicantWithPanelImage(customerId, imageUrl);
+        return res.json(result);
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to upload image' });
+    }
+}
+
+async function uploadInvertorImage(req, res) {
+    try {
+        const customerId = Number(req.params.registered_customer_id);
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ message: 'Invertor image is required' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}/uploads`;
+        const customerFolder = req.uploadContext?.customerFolder || 'unknown';
+        const imageUrl = `${baseUrl}/${customerFolder}/${file.filename}`;
+
+        const result = await service.uploadInvertorImage(customerId, imageUrl);
+        return res.json(result);
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to upload image' });
+    }
+}
+
+async function uploadApplicantWithInvertorImage(req, res) {
+    try {
+        const customerId = Number(req.params.registered_customer_id);
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ message: 'Applicant with invertor image is required' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}/uploads`;
+        const customerFolder = req.uploadContext?.customerFolder || 'unknown';
+        const imageUrl = `${baseUrl}/${customerFolder}/${file.filename}`;
+
+        const result = await service.uploadApplicantWithInvertorImage(customerId, imageUrl);
+        return res.json(result);
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to upload image' });
+    }
+}
+
 async function remove(req, res) {
     try {
         await service.remove(Number(req.params.id));
@@ -211,4 +297,8 @@ module.exports = {
     uploadPaybillDocument,
     uploadWarrantyDocument,
     uploadDcrDocument,
+    uploadSolarPanelImages,
+    uploadApplicantWithPanelImage,
+    uploadInvertorImage,
+    uploadApplicantWithInvertorImage,
 };
