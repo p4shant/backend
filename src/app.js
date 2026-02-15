@@ -44,7 +44,37 @@ const uploadsDir = env.uploadsRoot;
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir));
+
+// Configure static file serving with proper headers for downloads
+app.use('/uploads', (req, res, next) => {
+    // Set headers for proper file serving
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    // Allow browsers to display files inline or download them
+    const filename = path.basename(req.path);
+
+    // Set Content-Disposition based on file type
+    const ext = path.extname(filename).toLowerCase();
+    if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext)) {
+        // For images, allow inline viewing but support download
+        res.setHeader('Content-Type', `image/${ext.substring(1)}`);
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    } else if (ext === '.pdf') {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    } else {
+        // For other files, suggest download
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    }
+
+    next();
+}, express.static(uploadsDir, {
+    setHeaders: (res, filepath) => {
+        // Additional headers for caching
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+    }
+}));
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
