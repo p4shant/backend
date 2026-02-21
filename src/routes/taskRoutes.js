@@ -7,6 +7,11 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Special routes (must come before /:id)
+router.post('/reassign', taskController.createReassignTask);
+router.get('/reassignment-approvals', taskController.getReassignmentApprovals);
+router.post('/:id/reassignment-action', taskController.handleReassignmentAction);
+
 // CRUD routes
 router.get('/', taskController.list);
 router.get('/:id', taskController.getById);

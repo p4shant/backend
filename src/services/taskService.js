@@ -815,6 +815,7 @@ async function getByEmployee(employeeId) {
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.assigned_to_id = ?
+    AND t.work_type NOT LIKE 'reassign_task_approval%'
     ORDER BY t.created_at DESC
   `;
     const rows = await db.query(query, [employeeId]);
@@ -910,6 +911,7 @@ async function getByCustomer(customerId) {
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.registered_customer_id = ?
+    AND t.work_type NOT LIKE 'reassign_task_approval%'
     ORDER BY t.created_at DESC
   `;
     const rows = await db.query(query, [customerId]);
@@ -927,6 +929,199 @@ async function createNextTasksInWorkflow(completedWorkType, registeredCustomerId
     );
 }
 
+async function getReassignmentApprovals() {
+    const query = `
+    SELECT 
+      t.*,
+      rc.id as customer_id,
+      rc.applicant_name,
+      rc.mobile_number,
+      rc.email_id,
+      rc.solar_plant_type,
+      rc.solar_system_type,
+      rc.plant_category,
+      rc.plant_size_kw,
+      rc.plant_price,
+      rc.district,
+      rc.installation_pincode,
+      rc.site_address,
+      rc.site_latitude,
+      rc.site_longitude,
+      rc.meter_type,
+      rc.name_correction_required,
+      rc.correct_name,
+      rc.load_enhancement_required,
+      rc.current_load,
+      rc.required_load,
+      rc.cot_required,
+      rc.cot_type,
+      rc.cot_documents,
+      rc.payment_mode,
+      rc.advance_payment_mode,
+      rc.upi_type,
+      rc.margin_money,
+      rc.special_finance_required,
+      rc.building_floor_number,
+      rc.structure_type,
+      rc.structure_length,
+      rc.structure_height,
+      rc.free_shadow_area,
+      rc.installation_date_feasible,
+      rc.application_status,
+      rc.aadhaar_front_url,
+      rc.aadhaar_back_url,
+      rc.pan_card_url,
+      rc.electric_bill_url,
+      rc.ceiling_paper_photo_url,
+      rc.cancel_cheque_url,
+    rc.site_image_gps_url,
+      rc.cot_death_certificate_url,
+      rc.cot_house_papers_url,
+      rc.cot_passport_photo_url,
+      rc.cot_family_registration_url,
+      rc.cot_aadhaar_photos_urls,
+      rc.cot_live_aadhaar_1_url,
+      rc.cot_live_aadhaar_2_url,
+      rc.created_by,
+      rc.created_at as customer_created_at,
+      rc.updated_at as customer_updated_at,
+      e.name as creator_name,
+      e.employee_role as creator_role,
+      e.phone_number as creator_phone,
+            ad.id as additional_documents_id,
+            ad.application_form,
+            ad.feasibility_form,
+            ad.etoken_document,
+            ad.net_metering_document,
+            ad.finance_quotation_document,
+            ad.finance_digital_approval,
+            ad.ubi_sanction_certificate_document,
+            ad.indent_document,
+            ad.solar_panels_images_url,
+            ad.inverter_image_url,
+            ad.applicant_with_panel_image_url,
+            ad.applicant_with_invertor_image_url,
+            ad.warranty_card_document,
+            ad.paybill_document,
+            ad.dcr_document,
+            ad.commissioning_document,
+      tl.id as transaction_id,
+      tl.total_amount as transaction_total_amount,
+      tl.paid_amount as transaction_paid_amount,
+      tl.amount_submitted_details as transaction_amount_submitted_details,
+      tl.amount_submitted_images_url as transaction_amount_submitted_images_url,
+      tl.created_at as transaction_created_at,
+      tl.updated_at as transaction_updated_at
+    FROM tasks t
+    LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
+    LEFT JOIN employees e ON rc.created_by = e.id
+        LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
+    LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
+    WHERE t.work_type LIKE 'reassign_task_approval%'
+    AND t.status = 'pending'
+    ORDER BY t.created_at DESC
+  `;
+    const rows = await db.query(query);
+    return rows.map(structureTaskWithCustomerData);
+}
+
+async function handleReassignmentAction(taskId, action, user) {
+    const task = await getById(taskId);
+    if (!task) {
+        const err = new Error('Task not found');
+        err.status = 404;
+        throw err;
+    }
+
+    // Verify it's a reassignment approval task
+    if (!task.work_type.startsWith('reassign_task_approval')) {
+        const err = new Error('This is not a reassignment approval task');
+        err.status = 400;
+        throw err;
+    }
+
+    if (action === 'approve') {
+        // Extract task ID and target employee phone from work description
+        // Format: "Name (Phone) requested to reassign ... TASK-XXX to Name (Phone)"
+        const workDescription = task.work;
+
+        // Extract TASK-XXX using regex
+        const taskIdMatch = workDescription.match(/TASK-(\d+)/);
+        if (!taskIdMatch) {
+            const err = new Error('Could not extract task ID from work description');
+            err.status = 400;
+            throw err;
+        }
+        const originalTaskIdString = taskIdMatch[0]; // e.g., "TASK-214"
+
+        // Extract target employee phone number (last phone number in parentheses)
+        const phoneMatches = workDescription.match(/\((\d{10})\)/g);
+        if (!phoneMatches || phoneMatches.length < 2) {
+            const err = new Error('Could not extract target employee phone number from work description');
+            err.status = 400;
+            throw err;
+        }
+        const targetPhoneNumber = phoneMatches[phoneMatches.length - 1].replace(/[()]/g, ''); // Last phone number
+
+        // Find the employee by phone number
+        const employeeResult = await db.query(
+            'SELECT id, name, employee_role FROM employees WHERE phone_number = ?',
+            [targetPhoneNumber]
+        );
+
+        if (employeeResult.length === 0) {
+            const err = new Error(`Employee with phone number ${targetPhoneNumber} not found`);
+            err.status = 404;
+            throw err;
+        }
+
+        const targetEmployee = employeeResult[0];
+
+        // Find the original task by searching for tasks with matching task ID in the system
+        // Since we store task IDs as integers, we need to find by the ID number
+        const taskIdNumber = parseInt(taskIdMatch[1]);
+
+        const originalTaskResult = await db.query(
+            'SELECT id FROM tasks WHERE id = ?',
+            [taskIdNumber]
+        );
+
+        if (originalTaskResult.length === 0) {
+            const err = new Error(`Original task ${originalTaskIdString} not found`);
+            err.status = 404;
+            throw err;
+        }
+
+        const originalTaskId = originalTaskResult[0].id;
+
+        // Update the original task with the new employee assignment
+        await db.query(
+            'UPDATE tasks SET assigned_to_id = ?, assigned_to_name = ?, assigned_to_role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [targetEmployee.id, targetEmployee.name, targetEmployee.employee_role, originalTaskId]
+        );
+
+        // Delete the reassignment approval task after successful reassignment
+        await remove(taskId);
+
+        return {
+            success: true,
+            message: `Task ${originalTaskIdString} successfully reassigned to ${targetEmployee.name} (${targetPhoneNumber})`,
+            originalTaskId: originalTaskId,
+            newAssignee: {
+                id: targetEmployee.id,
+                name: targetEmployee.name,
+                role: targetEmployee.employee_role,
+                phone: targetPhoneNumber
+            }
+        };
+    } else if (action === 'reject') {
+        // Delete the reassignment request task
+        await remove(taskId);
+
+        return { success: true, message: 'Task reassignment rejected' };
+    }
+}
+
 module.exports = {
     list,
     getById,
@@ -937,5 +1132,7 @@ module.exports = {
     getByStatus,
     getByEmployee,
     getByCustomer,
-    createNextTasksInWorkflow
+    createNextTasksInWorkflow,
+    getReassignmentApprovals,
+    handleReassignmentAction
 };
