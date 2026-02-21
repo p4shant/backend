@@ -139,9 +139,13 @@ async function listWithAbsentees(filters = {}) {
         const attendance = attendanceByEmployeeId.get(employee.id);
 
         if (attendance) {
-            // Employee HAS attendance record - return full data
+            // Employee HAS attendance record - determine actual status
             let status = 'present';
-            if (attendance.forgot_to_punch_out === 1) {
+
+            if (!attendance.punch_in_time) {
+                // No punch_in = absent (scheduler-created NULL entry)
+                status = 'absent';
+            } else if (attendance.forgot_to_punch_out === 1) {
                 status = 'forgot_to_punch_out';
             } else if (attendance.is_late === 1) {
                 status = 'late';
@@ -214,8 +218,9 @@ async function listWithAbsentees(filters = {}) {
     });
 
     // STEP 6: Calculate statistics
+    // presentCount = everyone who punched in (present + late + forgot_to_punch_out)
     const stats = {
-        presentCount: completeRecords.filter(r => r.status === 'present').length,
+        presentCount: completeRecords.filter(r => r.status === 'present' || r.status === 'late' || r.status === 'forgot_to_punch_out').length,
         lateCount: completeRecords.filter(r => r.status === 'late').length,
         forgotPunchOutCount: completeRecords.filter(r => r.status === 'forgot_to_punch_out').length,
         absentCount: completeRecords.filter(r => r.status === 'absent').length

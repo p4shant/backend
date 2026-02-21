@@ -26,8 +26,12 @@ function getCurrentDateIST() {
 }
 
 /**
- * Mark all employees who haven't marked attendance as absent
+ * Mark absent employees and flag forgot-to-punch-out employees
  * This runs daily at 11:30 PM IST
+ * 
+ * Logic:
+ * 1. Employees who punched in but did NOT punch out → mark forgot_to_punch_out = 1
+ * 2. Employees who have NO entry at all (no punch in, no punch out) → insert as absent
  */
 async function markAbsentEmployees() {
     try {
@@ -40,7 +44,21 @@ async function markAbsentEmployees() {
 
         console.log(`[Scheduler] Total employees in system: ${allEmployees.length}`);
 
-        // STEP 2: Fetch employees who already have attendance records for today
+        // STEP 2: Mark employees who punched in but forgot to punch out
+        const forgotPunchOutQuery = `
+            UPDATE employee_attendance 
+            SET forgot_to_punch_out = 1
+            WHERE attendance_date = ? 
+              AND punch_in_time IS NOT NULL 
+              AND punch_out_time IS NULL
+              AND forgot_to_punch_out = 0
+        `;
+        const forgotResult = await db.query(forgotPunchOutQuery, [currentDate]);
+        const forgotPunchOutCount = forgotResult.affectedRows || 0;
+
+        console.log(`[Scheduler] Employees marked as forgot_to_punch_out: ${forgotPunchOutCount}`);
+
+        // STEP 3: Fetch employees who already have attendance records for today
         const attendanceQuery = `
             SELECT DISTINCT employee_id 
             FROM employee_attendance 
@@ -48,12 +66,12 @@ async function markAbsentEmployees() {
         `;
         const attendanceRecords = await db.query(attendanceQuery, [currentDate]);
 
-        // Create a Set of employee IDs who have marked attendance
+        // Create a Set of employee IDs who have any attendance record
         const markedEmployeeIds = new Set(attendanceRecords.map(r => r.employee_id));
 
-        console.log(`[Scheduler] Employees who marked attendance: ${markedEmployeeIds.size}`);
+        console.log(`[Scheduler] Employees who have attendance entry: ${markedEmployeeIds.size}`);
 
-        // STEP 3: Find employees who haven't marked attendance
+        // STEP 4: Find employees who have NO entry at all → mark as absent
         const absentEmployees = allEmployees.filter(emp => !markedEmployeeIds.has(emp.id));
 
         console.log(`[Scheduler] Employees to mark as absent: ${absentEmployees.length}`);
@@ -65,12 +83,13 @@ async function markAbsentEmployees() {
                 date: currentDate,
                 totalEmployees: allEmployees.length,
                 presentEmployees: markedEmployeeIds.size,
+                forgotPunchOut: forgotPunchOutCount,
                 absentEmployees: 0,
                 markedAsAbsent: 0
             };
         }
 
-        // STEP 4: Insert absent records for employees who didn't mark attendance
+        // STEP 5: Insert absent records (no punch in, no punch out)
         const insertQuery = `
             INSERT INTO employee_attendance (
                 employee_id,
@@ -97,7 +116,6 @@ async function markAbsentEmployees() {
                 successCount++;
                 console.log(`[Scheduler] Marked ${employee.name} (ID: ${employee.id}) as absent`);
             } catch (err) {
-                // Check if error is due to duplicate entry (race condition)
                 if (err.code === 'ER_DUP_ENTRY') {
                     console.log(`[Scheduler] Employee ${employee.name} (ID: ${employee.id}) already has attendance record (race condition)`);
                 } else {
@@ -112,6 +130,7 @@ async function markAbsentEmployees() {
             date: currentDate,
             totalEmployees: allEmployees.length,
             presentEmployees: markedEmployeeIds.size,
+            forgotPunchOut: forgotPunchOutCount,
             absentEmployees: absentEmployees.length,
             markedAsAbsent: successCount,
             failedToMark: failCount

@@ -51,12 +51,23 @@ app.use('/uploads', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
+    // Check if this is a forced download request (via ?download=true query param)
+    const forceDownload = req.query.download === 'true';
+
     // Allow browsers to display files inline or download them
     const filename = path.basename(req.path);
 
     // Set Content-Disposition based on file type
     const ext = path.extname(filename).toLowerCase();
-    if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext)) {
+    if (forceDownload) {
+        // Force download for all file types when ?download=true
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext)) {
+            res.setHeader('Content-Type', 'application/octet-stream');
+        } else if (ext === '.pdf') {
+            res.setHeader('Content-Type', 'application/octet-stream');
+        }
+    } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext)) {
         // For images, allow inline viewing but support download
         res.setHeader('Content-Type', `image/${ext.substring(1)}`);
         res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
