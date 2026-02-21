@@ -19,8 +19,6 @@ function validateRequiredFields(data) {
         'plant_size_kw',
         'district',
         'installation_pincode',
-        'site_latitude',
-        'site_longitude',
         'created_by'
     ];
 

@@ -12,6 +12,7 @@ const employeeAttendanceRoutes = require('./employeeAttendanceRoutes');
 const attendanceRoutes = require('./attendanceRoutes');
 const schedulerRoutes = require('./schedulerRoutes');
 const statsRoutes = require('./statsRoutes');
+const downloadRoutes = require('./downloadRoutes');
 const { authenticate } = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -29,5 +30,6 @@ router.use('/employee-attendance', employeeAttendanceRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/scheduler', schedulerRoutes);
 router.use('/stats', statsRoutes);
+router.use('/download', downloadRoutes);
 
 module.exports = router;

@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS registered_customers (
   district VARCHAR(100) NOT NULL,
   installation_pincode VARCHAR(10) NOT NULL,
   site_address TEXT NULL,
-  site_latitude DECIMAL(10, 8) NOT NULL,
-  site_longitude DECIMAL(11, 8) NOT NULL,
+  site_latitude DECIMAL(10, 8) NULL,
+  site_longitude DECIMAL(11, 8) NULL,
 
   -- Meter Details
   meter_type ENUM('Electric Meter', 'Smart Meter', 'Other') NOT NULL DEFAULT 'Electric Meter',

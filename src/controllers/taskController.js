@@ -152,6 +152,61 @@ async function getByCustomer(req, res) {
     }
 }
 
+async function createReassignTask(req, res) {
+    try {
+        const { work, work_type, status, assigned_to_id, assigned_to_name, assigned_to_role, registered_customer_id } = req.body;
+
+        // Validate required fields
+        if (!work || !work_type || !status || !assigned_to_id || !assigned_to_name || !assigned_to_role || !registered_customer_id) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        // Create task data
+        const taskData = {
+            work,
+            work_type,
+            status,
+            assigned_to_id: Number(assigned_to_id),
+            assigned_to_name,
+            assigned_to_role,
+            registered_customer_id: Number(registered_customer_id),
+        };
+
+        const task = await taskService.create(taskData);
+        return res.status(201).json({ success: true, id: task.id, data: task });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ success: false, message: err.message || 'Unable to create reassignment task' });
+    }
+}
+
+async function getReassignmentApprovals(req, res) {
+    try {
+        const tasks = await taskService.getReassignmentApprovals();
+        return res.json({ success: true, data: tasks });
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ success: false, message: err.message || 'Unable to fetch reassignment approval tasks' });
+    }
+}
+
+async function handleReassignmentAction(req, res) {
+    try {
+        const taskId = Number(req.params.id);
+        const { action } = req.body;
+
+        if (!action || !['approve', 'reject'].includes(action)) {
+            return res.status(400).json({ success: false, message: 'Invalid action. Must be "approve" or "reject"' });
+        }
+
+        const result = await taskService.handleReassignmentAction(taskId, action, req.user);
+        return res.json(result);
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ success: false, message: err.message || 'Unable to process reassignment action' });
+    }
+}
+
 module.exports = {
     list,
     getById,
@@ -161,5 +216,8 @@ module.exports = {
     remove,
     getByStatus,
     getByEmployee,
-    getByCustomer
+    getByCustomer,
+    createReassignTask,
+    getReassignmentApprovals,
+    handleReassignmentAction
 };
