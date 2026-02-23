@@ -70,7 +70,6 @@ const upload = multer({
             cb(new Error('Only image and PDF files are allowed'));
         }
     },
-    limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 router.get('/', controller.list);
