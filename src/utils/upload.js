@@ -82,7 +82,6 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage,
     fileFilter,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 });
 
 function uploadSingleImage(fieldName = 'image') {
@@ -130,7 +129,6 @@ const attendanceStorage = multer.diskStorage({
 const uploadAttendance = multer({
     storage: attendanceStorage,
     fileFilter,
-    limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 function uploadAttendanceImage(fieldName = 'photo') {
