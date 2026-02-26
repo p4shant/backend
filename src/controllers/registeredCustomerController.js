@@ -8,7 +8,8 @@ const {
     createCotRequestTask,
     createLoadRequestTask,
     createNameCorrectionRequestTask,
-    createFinanceRegistrationTask
+    createFinanceRegistrationTask,
+    createApprovalOfPaymentCollectionTask
 } = require('../utils/Tasks');
 const employeeService = require('../services/employeeService');
 
@@ -96,6 +97,13 @@ async function create(req, res) {
             );
             const systemAdminId = systemAdminResult.length > 0 ? systemAdminResult[0].id : loggedInUserId;
 
+            // Find Master Admin
+            const masterAdminResult = await db.query(
+                'SELECT id FROM employees WHERE employee_role = ? LIMIT 1',
+                ['Master Admin']
+            );
+            const masterAdminId = masterAdminResult.length > 0 ? masterAdminResult[0].id : loggedInUserId;
+
             // Find Electrician in the same district as customer
             const electricianResult = await db.query(
                 'SELECT id FROM employees WHERE district = ? AND employee_role = ? LIMIT 1',
@@ -117,6 +125,7 @@ async function create(req, res) {
             await createCustomerDataGatheringTask(customerId, salesExecutiveId); // Sale Executive who registered
             await createCollectRemainingAmountTask(customerId, salesExecutiveId); // Sale Executive who registered
             await createCompleteRegistrationTask(customerId, systemAdminId); // System Admin
+            await createApprovalOfPaymentCollectionTask(customerId, masterAdminId); // Master Admin
 
             // Conditionally create tasks based on requirements
             if (data.cot_required === 'Yes') {

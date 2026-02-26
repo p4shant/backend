@@ -13,6 +13,7 @@ const attendanceRoutes = require('./attendanceRoutes');
 const schedulerRoutes = require('./schedulerRoutes');
 const statsRoutes = require('./statsRoutes');
 const downloadRoutes = require('./downloadRoutes');
+const notificationRoutes = require('./notificationRoutes');
 const { authenticate } = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -31,5 +32,7 @@ router.use('/attendance', attendanceRoutes);
 router.use('/scheduler', schedulerRoutes);
 router.use('/stats', statsRoutes);
 router.use('/download', downloadRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/notifications', notificationRoutes);
 
 module.exports = router;
