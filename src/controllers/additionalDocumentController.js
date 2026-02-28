@@ -265,6 +265,26 @@ async function uploadApplicantWithInvertorImage(req, res) {
     }
 }
 
+async function uploadSolarPanelSummaryImage(req, res) {
+    try {
+        const customerId = Number(req.params.registered_customer_id);
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ message: 'Solar panel summary image is required' });
+        }
+
+        const baseUrl = `${req.protocol}://${req.get('host')}/uploads`;
+        const customerFolder = req.uploadContext?.customerFolder || 'unknown';
+        const imageUrl = `${baseUrl}/${customerFolder}/${file.filename}`;
+
+        const result = await service.uploadSolarPanelSummaryImage(customerId, imageUrl);
+        return res.json(result);
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to upload image' });
+    }
+}
+
 async function remove(req, res) {
     try {
         await service.remove(Number(req.params.id));
@@ -298,6 +318,7 @@ module.exports = {
     uploadWarrantyDocument,
     uploadDcrDocument,
     uploadSolarPanelImages,
+    uploadSolarPanelSummaryImage,
     uploadApplicantWithPanelImage,
     uploadInvertorImage,
     uploadApplicantWithInvertorImage,

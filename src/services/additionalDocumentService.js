@@ -43,7 +43,7 @@ async function create(data) {
         'registered_customer_id',
         'application_form', 'feasibility_form', 'etoken_document', 'net_metering_document',
         'finance_quotation_document', 'finance_digital_approval', 'ubi_sanction_certificate_document', 'indent_document',
-        'solar_panels_images_url', 'inverter_image_url', 'applicant_with_panel_image_url', 'applicant_with_invertor_image_url', 'warranty_card_document', 'paybill_document',
+        'solar_panels_images_url', 'solar_panel_summary_image_url', 'inverter_image_url', 'applicant_with_panel_image_url', 'applicant_with_invertor_image_url', 'warranty_card_document', 'paybill_document',
         'dcr_document', 'commissioning_document'
     ];
     const values = fields.map(f => (data[f] !== undefined ? data[f] : null));
@@ -435,6 +435,37 @@ async function uploadApplicantWithInvertorImage(customerId, applicantWithInverto
     }
 }
 
+async function uploadSolarPanelSummaryImage(customerId, solarPanelSummaryImageUrl) {
+    await validateCustomer(customerId);
+
+    const existing = await db.query(
+        'SELECT id FROM additional_documents WHERE registered_customer_id = ?',
+        [customerId]
+    );
+
+    if (existing.length > 0) {
+        await db.query(
+            'UPDATE additional_documents SET solar_panel_summary_image_url = ? WHERE registered_customer_id = ?',
+            [solarPanelSummaryImageUrl, customerId]
+        );
+        return {
+            success: true,
+            message: 'Solar panel summary image uploaded successfully',
+            data: { solar_panel_summary_image_url: solarPanelSummaryImageUrl }
+        };
+    } else {
+        await db.query(
+            'INSERT INTO additional_documents (registered_customer_id, solar_panel_summary_image_url) VALUES (?, ?)',
+            [customerId, solarPanelSummaryImageUrl]
+        );
+        return {
+            success: true,
+            message: 'Solar panel summary image uploaded successfully',
+            data: { solar_panel_summary_image_url: solarPanelSummaryImageUrl }
+        };
+    }
+}
+
 module.exports = {
     list,
     getById,
@@ -450,6 +481,7 @@ module.exports = {
     uploadWarrantyDocument,
     uploadDcrDocument,
     uploadSolarPanelImages,
+    uploadSolarPanelSummaryImage,
     uploadApplicantWithPanelImage,
     uploadInvertorImage,
     uploadApplicantWithInvertorImage,

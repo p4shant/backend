@@ -88,6 +88,7 @@ router.post('/:registered_customer_id/registration', upload.fields([
     { name: 'net_metering_document', maxCount: 1 }
 ]), controller.uploadRegistrationDocuments);
 router.post('/:registered_customer_id/upload-solar-panels', upload.array('solar_panels_images', 10), controller.uploadSolarPanelImages);
+router.post('/:registered_customer_id/upload-solar-panel-summary', upload.single('solar_panel_summary_image'), controller.uploadSolarPanelSummaryImage);
 router.post('/:registered_customer_id/upload-applicant-panel', upload.single('applicant_with_panel_image'), controller.uploadApplicantWithPanelImage);
 router.post('/:registered_customer_id/upload-invertor', upload.single('invertor_image'), controller.uploadInvertorImage);
 router.post('/:registered_customer_id/upload-applicant-invertor', upload.single('applicant_with_invertor_image'), controller.uploadApplicantWithInvertorImage);

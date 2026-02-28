@@ -64,7 +64,7 @@ async function list(filters = {}) {
            ad.id as additional_documents_id,
            ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
            ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
-           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
+           ad.indent_document, ad.solar_panels_images_url, ad.solar_panel_summary_image_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
            ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id
@@ -93,7 +93,7 @@ async function getById(id) {
            ad.id as additional_documents_id,
            ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
            ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
-           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
+           ad.indent_document, ad.solar_panels_images_url, ad.solar_panel_summary_image_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
            ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id
@@ -115,6 +115,7 @@ async function getById(id) {
             ubi_sanction_certificate_document: customer.ubi_sanction_certificate_document,
             indent_document: customer.indent_document,
             solar_panels_images_url: customer.solar_panels_images_url,
+            solar_panel_summary_image_url: customer.solar_panel_summary_image_url,
             inverter_image_url: customer.inverter_image_url,
             applicant_with_panel_image_url: customer.applicant_with_panel_image_url,
             applicant_with_invertor_image_url: customer.applicant_with_invertor_image_url,
@@ -134,6 +135,7 @@ async function getById(id) {
         delete customer.ubi_sanction_certificate_document;
         delete customer.indent_document;
         delete customer.solar_panels_images_url;
+        delete customer.solar_panel_summary_image_url;
         delete customer.inverter_image_url;
         delete customer.applicant_with_panel_image_url;
         delete customer.applicant_with_invertor_image_url;
@@ -265,7 +267,7 @@ async function getByStatus(status) {
            ad.id as additional_documents_id,
            ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
            ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
-           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
+           ad.indent_document, ad.solar_panels_images_url, ad.solar_panel_summary_image_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
            ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id
@@ -282,7 +284,7 @@ async function getByEmployee(employeeId) {
            ad.id as additional_documents_id,
            ad.application_form, ad.feasibility_form, ad.etoken_document, ad.net_metering_document,
            ad.finance_quotation_document, ad.finance_digital_approval, ad.ubi_sanction_certificate_document,
-           ad.indent_document, ad.solar_panels_images_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
+           ad.indent_document, ad.solar_panels_images_url, ad.solar_panel_summary_image_url, ad.inverter_image_url, ad.applicant_with_panel_image_url, ad.applicant_with_invertor_image_url,
            ad.warranty_card_document, ad.paybill_document, ad.dcr_document, ad.commissioning_document
     FROM registered_customers rc
     LEFT JOIN employees e ON rc.created_by = e.id

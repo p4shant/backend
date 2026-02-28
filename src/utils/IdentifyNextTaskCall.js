@@ -137,7 +137,7 @@ const NEXT_TASK_MAPPING = {
                 functionName: 'createInspectionTask'
             },
             {
-                worktype: 'asign_qa',
+                worktype: 'assign_qa',
                 requiredRole: 'SFDC Admin',
                 functionName: 'createAssignQATask'
             }
