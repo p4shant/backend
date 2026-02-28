@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS additional_documents (
   ubi_sanction_certificate_document TEXT NULL,
   indent_document TEXT NULL,
   solar_panels_images_url TEXT NULL, -- JSON array of URLs
+  solar_panel_summary_image_url TEXT NULL,
   inverter_image_url TEXT NULL,
   applicant_with_panel_image_url TEXT NULL,
   applicant_with_invertor_image_url TEXT NULL,
