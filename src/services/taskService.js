@@ -454,11 +454,6 @@ async function validateDocumentRequirements(workType, customerId) {
             fields: ['application_form', 'feasibility_form', 'etoken_document', 'net_metering_document'],
             message: 'Registration documents (application form, feasibility form, e-token, and net metering) must be uploaded before completing this task'
         },
-        'hard_copy_indent_creation': {
-            table: 'additional_documents',
-            fields: ['indent_document'],
-            message: 'Indent document must be uploaded before completing this task'
-        },
         'generate_bill': {
             table: 'additional_documents',
             fields: ['paybill_document'],
