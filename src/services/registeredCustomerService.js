@@ -230,6 +230,33 @@ async function update(id, data) {
         return getById(id);
     }
 
+    // Convert any full URLs to relative paths for consistent storage
+    // This handles cases where frontend sends full URLs like http://domain.com/uploads/...
+    const urlFields = [
+        'aadhaar_front_url', 'aadhaar_back_url', 'pan_card_url', 'electric_bill_url',
+        'ceiling_paper_photo_url', 'cancel_cheque_url', 'site_image_gps_url',
+        'cot_death_certificate_url', 'cot_house_papers_url', 'cot_passport_photo_url',
+        'cot_family_registration_url', 'cot_aadhaar_photos_urls',
+        'cot_live_aadhaar_1_url', 'cot_live_aadhaar_2_url'
+    ];
+
+    for (const field of urlFields) {
+        if (updateData[field] && typeof updateData[field] === 'string') {
+            // Convert full URLs to relative paths
+            // Examples: 
+            // http://localhost:3000/uploads/folder/file.jpg -> /uploads/folder/file.jpg
+            // http://srv1304976.hstgr.cloud/uploads/folder/file.jpg -> /uploads/folder/file.jpg
+            const urlValue = updateData[field];
+
+            // Match any URL that contains /uploads/
+            const uploadsMatch = urlValue.match(/\/uploads\/.+/);
+            if (uploadsMatch) {
+                updateData[field] = uploadsMatch[0]; // Extract just the /uploads/... part
+                console.log(`✓ Converted ${field} from full URL to relative path: ${uploadsMatch[0]}`);
+            }
+        }
+    }
+
     const fields = Object.keys(updateData);
     const values = fields.map(f => updateData[f]);
     const setClause = fields.map(f => `${f} = ?`).join(', ');

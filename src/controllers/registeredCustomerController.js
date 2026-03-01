@@ -236,36 +236,83 @@ async function uploadDocuments(req, res) {
 
         const folder = req.uploadContext?.customerFolder || 'unknown';
         const baseUrl = `${req.protocol}://${req.get('host')}/uploads/${folder}`;
+        const relativePath = `/uploads/${folder}`; // Relative path for database storage
 
         const uploadedFiles = {};
+        const urlUpdates = {}; // URLs to save in database
+
+        // Mapping from file field names to database column names
+        const fieldToColumnMap = {
+            'aadhaar_front': 'aadhaar_front_url',
+            'aadhaar_back': 'aadhaar_back_url',
+            'pan_card': 'pan_card_url',
+            'electric_bill': 'electric_bill_url',
+            'ceiling_paper_photo': 'ceiling_paper_photo_url',
+            'cancel_cheque': 'cancel_cheque_url',
+            'site_image_gps': 'site_image_gps_url',
+            'cot_death_certificate': 'cot_death_certificate_url',
+            'cot_house_papers': 'cot_house_papers_url',
+            'cot_passport_photo': 'cot_passport_photo_url',
+            'cot_family_registration': 'cot_family_registration_url',
+            'cot_live_aadhaar_1': 'cot_live_aadhaar_1_url',
+            'cot_live_aadhaar_2': 'cot_live_aadhaar_2_url',
+            'cot_aadhaar_photos': 'cot_aadhaar_photos_urls'
+        };
 
         // Handle all uploaded files
         for (const [fieldName, fileArray] of Object.entries(req.files)) {
             if (Array.isArray(fileArray)) {
                 if (fileArray.length === 1) {
                     // Single file field
+                    const relativeUrl = `${relativePath}/${fileArray[0].filename}`;
                     uploadedFiles[fieldName] = {
                         url: `${baseUrl}/${fileArray[0].filename}`,
                         filename: fileArray[0].filename,
                         mimetype: fileArray[0].mimetype,
                         size: fileArray[0].size
                     };
+
+                    // Save relative path for database update
+                    const columnName = fieldToColumnMap[fieldName];
+                    if (columnName) {
+                        urlUpdates[columnName] = relativeUrl;
+                    }
                 } else {
                     // Multiple files (like aadhaar_photos)
+                    const urls = fileArray.map(file => `${relativePath}/${file.filename}`);
                     uploadedFiles[fieldName] = fileArray.map(file => ({
                         url: `${baseUrl}/${file.filename}`,
                         filename: file.filename,
                         mimetype: file.mimetype,
                         size: file.size
                     }));
+
+                    // Save relative paths as JSON array for database update
+                    const columnName = fieldToColumnMap[fieldName];
+                    if (columnName) {
+                        urlUpdates[columnName] = JSON.stringify(urls);
+                    }
                 }
+            }
+        }
+
+        // Automatically update the customer record with file URLs
+        const customerId = req.params.registered_customer_id || req.params.id;
+        if (customerId && Object.keys(urlUpdates).length > 0) {
+            try {
+                await registeredCustomerService.partialUpdate(Number(customerId), urlUpdates);
+                console.log(`✓ Updated customer ${customerId} with uploaded document URLs`);
+            } catch (updateErr) {
+                console.error('Error updating customer with file URLs:', updateErr);
+                // Don't fail the upload - files are already saved
             }
         }
 
         return res.status(201).json({
             success: true,
             folder,
-            files: uploadedFiles
+            files: uploadedFiles,
+            urlsSaved: Object.keys(urlUpdates).length > 0
         });
     } catch (err) {
         const status = err.status || 500;
