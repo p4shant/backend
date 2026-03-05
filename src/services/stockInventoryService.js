@@ -40,28 +40,57 @@ async function getInventorySummary() {
 
 /**
  * Get current quantity for a specific inventory slot (with sub_type).
+ * For null sub_type we use SUM() so that any residual duplicate rows
+ * (created by the old ON DUPLICATE KEY bug) are counted correctly.
  */
 async function getQuantity(conn, district, component, sub_type, brand, dcr_type) {
     const sql = sub_type
         ? 'SELECT quantity FROM stock_inventory WHERE district = ? AND component = ? AND sub_type = ? AND brand = ? AND dcr_type = ?'
-        : 'SELECT quantity FROM stock_inventory WHERE district = ? AND component = ? AND sub_type IS NULL AND brand = ? AND dcr_type = ?';
+        : 'SELECT COALESCE(SUM(quantity), 0) AS quantity FROM stock_inventory WHERE district = ? AND component = ? AND sub_type IS NULL AND brand = ? AND dcr_type = ?';
     const params = sub_type
         ? [district, component, sub_type, brand, dcr_type]
         : [district, component, brand, dcr_type];
     const rows = await conn.execute(sql, params);
-    return rows[0]?.length > 0 ? rows[0][0].quantity : 0;
+    return rows[0]?.length > 0 ? (rows[0][0].quantity || 0) : 0;
 }
 
 /**
  * Add quantity to inventory (used for inward / transfer_in).
+ *
+ * IMPORTANT: MySQL's unique index does NOT treat NULL = NULL, so
+ * "ON DUPLICATE KEY UPDATE" never fires when sub_type IS NULL.
+ * That would silently insert a new duplicate row on every call instead
+ * of incrementing the existing one. We therefore use an explicit
+ * UPDATE → INSERT pattern for the null sub_type case.
  */
 async function addQuantity(conn, district, component, sub_type, brand, dcr_type, amount) {
-    const sql = `
-        INSERT INTO stock_inventory (district, component, sub_type, brand, dcr_type, quantity)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity), updated_at = CURRENT_TIMESTAMP
-    `;
-    await conn.execute(sql, [district, component, sub_type || null, brand, dcr_type, amount]);
+    const resolvedSubType = sub_type || null;
+
+    if (resolvedSubType === null) {
+        // Null sub_type (simple components: ACDB, DCDB, earthing_rod, etc.)
+        const [updateResult] = await conn.execute(
+            `UPDATE stock_inventory
+             SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP
+             WHERE district = ? AND component = ? AND sub_type IS NULL AND brand = ? AND dcr_type = ?`,
+            [amount, district, component, brand, dcr_type]
+        );
+        if (updateResult.affectedRows === 0) {
+            // Row doesn't exist yet — insert it
+            await conn.execute(
+                `INSERT INTO stock_inventory (district, component, sub_type, brand, dcr_type, quantity)
+                 VALUES (?, ?, NULL, ?, ?, ?)`,
+                [district, component, brand, dcr_type, amount]
+            );
+        }
+    } else {
+        // Non-null sub_type (panel wattage, inverter type) — ON DUPLICATE KEY works correctly
+        await conn.execute(
+            `INSERT INTO stock_inventory (district, component, sub_type, brand, dcr_type, quantity)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity), updated_at = CURRENT_TIMESTAMP`,
+            [district, component, resolvedSubType, brand, dcr_type, amount]
+        );
+    }
 }
 
 /**
@@ -94,14 +123,15 @@ async function subtractQuantity(conn, district, component, sub_type, brand, dcr_
 async function validateAvailability(district, brand, dcr_type, items) {
     const shortages = [];
     for (const item of items) {
+        // Use SUM for null sub_type to correctly total any residual duplicate rows
         const sql = item.sub_type
             ? 'SELECT quantity FROM stock_inventory WHERE district = ? AND component = ? AND sub_type = ? AND brand = ? AND dcr_type = ?'
-            : 'SELECT quantity FROM stock_inventory WHERE district = ? AND component = ? AND sub_type IS NULL AND brand = ? AND dcr_type = ?';
+            : 'SELECT COALESCE(SUM(quantity), 0) AS quantity FROM stock_inventory WHERE district = ? AND component = ? AND sub_type IS NULL AND brand = ? AND dcr_type = ?';
         const params = item.sub_type
             ? [district, item.component, item.sub_type, brand, dcr_type]
             : [district, item.component, brand, dcr_type];
         const rows = await db.query(sql, params);
-        const available = rows.length > 0 ? rows[0].quantity : 0;
+        const available = rows.length > 0 ? (rows[0].quantity || 0) : 0;
         if (available < item.actual_quantity) {
             shortages.push({
                 component: item.component,
@@ -119,16 +149,42 @@ async function validateAvailability(district, brand, dcr_type, items) {
 
 /**
  * Take a daily snapshot of current inventory.
+ *
+ * We use DELETE + INSERT (rather than ON DUPLICATE KEY UPDATE) because MySQL
+ * unique indexes do NOT treat NULL == NULL — so ON DUPLICATE KEY would silently
+ * insert duplicate snapshot rows for every component with sub_type IS NULL
+ * (ACDB, DCDB, earthing_rod, earthing_chemical, lightning_arrestor).
+ *
+ * GROUP BY in the SELECT consolidates any residual duplicate null-sub_type
+ * rows that may already exist in stock_inventory.
  */
 async function takeDailySnapshot(snapshotDate) {
-    const sql = `
-        INSERT INTO stock_daily_snapshot (snapshot_date, district, component, sub_type, brand, dcr_type, quantity)
-        SELECT ?, district, component, sub_type, brand, dcr_type, quantity
-        FROM stock_inventory
-        WHERE quantity > 0
-        ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
-    `;
-    await db.query(sql, [snapshotDate]);
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // Remove existing snapshot for this date (clean replace)
+        await conn.execute('DELETE FROM stock_daily_snapshot WHERE snapshot_date = ?', [snapshotDate]);
+
+        // Insert fresh from inventory, using SUM+GROUP BY to aggregate any
+        // duplicate null-sub_type rows in stock_inventory into a single snapshot row
+        await conn.execute(
+            `INSERT INTO stock_daily_snapshot
+                 (snapshot_date, district, component, sub_type, brand, dcr_type, quantity)
+             SELECT ?, district, component, sub_type, brand, dcr_type, SUM(quantity) AS quantity
+             FROM stock_inventory
+             WHERE quantity > 0
+             GROUP BY district, component, sub_type, brand, dcr_type`,
+            [snapshotDate]
+        );
+
+        await conn.commit();
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
+    }
 }
 
 /**

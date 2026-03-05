@@ -2,7 +2,7 @@
  * Stock Inward Service
  * =====================
  * Handles creating inward transactions and updating inventory.
- * V2: Supports sub_types — inverter sub_type = system type, panel sub_type = wattage.
+ * V3: Mandatory entry_mode — 'system' (BOM-based) or 'component' (direct component entry).
  */
 
 const db = require('../config/db');
@@ -15,81 +15,104 @@ const {
 /**
  * Create a stock inward record.
  * @param {Object} data
- *   - district, brand, dcr_type, notes, created_by
- *   - systems: { '2KW': 3, '3KW': 2, ... }
- *   - panel_breakdown: { '570': 2, '580': 10, ... }          (wattage → count)
- *   - items: [{ component, sub_type?, actual_quantity }]      (overrides for non-panel/inverter)
+ *   - district, brand, dcr_type, entry_mode, notes, created_by
+ *   - systems: { '2KW': 3, '3KW': 2, ... }               (required for system mode)
+ *   - panel_breakdown: { '570': 2, '580': 10, ... }        (wattage → count)
+ *   - items: [{ component, sub_type?, actual_quantity }]    (overrides for system / full list for component)
  */
 async function create(data) {
-    const { district, brand, dcr_type, systems, panel_breakdown, items, notes, created_by } = data;
+    const { district, brand, dcr_type, entry_mode, systems, panel_breakdown, items, notes, created_by } = data;
 
-    // Validation
+    // Validation — common
     if (!district || !brand || !dcr_type) {
         const err = new Error('district, brand, and dcr_type are required');
         err.status = 400;
         throw err;
     }
-
-    // Filter active systems
-    const activeSystems = {};
-    for (const [sysType, qty] of Object.entries(systems || {})) {
-        if (qty > 0) activeSystems[sysType] = qty;
-    }
-    if (Object.keys(activeSystems).length === 0) {
-        const err = new Error('At least one system type with quantity > 0 is required');
+    if (!entry_mode || !['system', 'component'].includes(entry_mode)) {
+        const err = new Error('entry_mode is required and must be "system" or "component"');
         err.status = 400;
         throw err;
     }
 
-    // Planned aggregate totals
-    const planned = calculatePlannedComponents(activeSystems);
+    let activeSystems = {};
+    let finalItems = [];
 
-    // Inverter breakdown by sub_type (auto from systems)
-    const inverterBreakdown = calculateInverterBreakdown(activeSystems);
+    if (entry_mode === 'system') {
+        // ── SYSTEM MODE ──────────────────────────────────────────────
+        for (const [sysType, qty] of Object.entries(systems || {})) {
+            if (qty > 0) activeSystems[sysType] = qty;
+        }
+        if (Object.keys(activeSystems).length === 0) {
+            const err = new Error('At least one system type with quantity > 0 is required in system mode');
+            err.status = 400;
+            throw err;
+        }
 
-    // Build final items list with sub_types
-    const finalItems = [];
+        const planned = calculatePlannedComponents(activeSystems);
+        const inverterBreakdown = calculateInverterBreakdown(activeSystems);
 
-    // 1. Inverter items — one per sub_type
-    for (const [invType, qty] of Object.entries(inverterBreakdown)) {
-        const overrideItem = items?.find(i => i.component === 'inverter' && i.sub_type === invType);
-        finalItems.push({
-            component: 'inverter',
-            sub_type: invType,
-            planned_quantity: qty,
-            actual_quantity: overrideItem ? (overrideItem.actual_quantity ?? qty) : qty,
-        });
-    }
-
-    // 2. Panel items — one per wattage from panel_breakdown
-    const panelBreakdown = panel_breakdown || {};
-    const totalPanelsPlanned = planned.panel || 0;
-    for (const [wattage, qty] of Object.entries(panelBreakdown)) {
-        if (qty > 0) {
+        // 1. Inverter items — one per sub_type
+        for (const [invType, qty] of Object.entries(inverterBreakdown)) {
+            const overrideItem = items?.find(i => i.component === 'inverter' && i.sub_type === invType);
             finalItems.push({
-                component: 'panel',
-                sub_type: wattage,
-                planned_quantity: 0, // wattage-level planned is not deterministic
-                actual_quantity: qty,
+                component: 'inverter',
+                sub_type: invType,
+                planned_quantity: qty,
+                actual_quantity: overrideItem ? (overrideItem.actual_quantity ?? qty) : qty,
             });
         }
-    }
-    // Store total planned panels as a summary item if no panels specified
-    const totalPanelsActual = Object.values(panelBreakdown).reduce((s, v) => s + v, 0);
 
-    // 3. Other components (acdb, dcdb, earthing_rod, earthing_chemical, lightning_arrestor)
-    const simpleComponents = ['acdb', 'dcdb', 'earthing_rod', 'earthing_chemical', 'lightning_arrestor'];
-    for (const comp of simpleComponents) {
-        const override = items?.find(i => i.component === comp);
-        const plannedQty = planned[comp] || 0;
-        const actualQty = override ? (override.actual_quantity ?? plannedQty) : plannedQty;
-        if (plannedQty > 0 || actualQty > 0) {
-            finalItems.push({
-                component: comp,
-                sub_type: null,
-                planned_quantity: plannedQty,
-                actual_quantity: actualQty,
-            });
+        // 2. Panel items — one per wattage from panel_breakdown
+        const panelBreakdown = panel_breakdown || {};
+        for (const [wattage, qty] of Object.entries(panelBreakdown)) {
+            if (qty > 0) {
+                finalItems.push({
+                    component: 'panel',
+                    sub_type: wattage,
+                    planned_quantity: 0,
+                    actual_quantity: qty,
+                });
+            }
+        }
+
+        // 3. Other components
+        const simpleComponents = ['acdb', 'dcdb', 'earthing_rod', 'earthing_chemical', 'lightning_arrestor'];
+        for (const comp of simpleComponents) {
+            const override = items?.find(i => i.component === comp);
+            const plannedQty = planned[comp] || 0;
+            const actualQty = override ? (override.actual_quantity ?? plannedQty) : plannedQty;
+            if (plannedQty > 0 || actualQty > 0) {
+                finalItems.push({
+                    component: comp,
+                    sub_type: null,
+                    planned_quantity: plannedQty,
+                    actual_quantity: actualQty,
+                });
+            }
+        }
+    } else {
+        // ── COMPONENT MODE ───────────────────────────────────────────
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            const err = new Error('At least one component item is required in component mode');
+            err.status = 400;
+            throw err;
+        }
+        const hasAnyQty = items.some(i => (i.actual_quantity || 0) > 0);
+        if (!hasAnyQty) {
+            const err = new Error('At least one component must have quantity > 0');
+            err.status = 400;
+            throw err;
+        }
+        for (const item of items) {
+            if ((item.actual_quantity || 0) > 0) {
+                finalItems.push({
+                    component: item.component,
+                    sub_type: item.sub_type || null,
+                    planned_quantity: 0,
+                    actual_quantity: item.actual_quantity,
+                });
+            }
         }
     }
 
@@ -97,19 +120,21 @@ async function create(data) {
     try {
         await conn.beginTransaction();
 
-        // 1. Insert inward header
+        // 1. Insert inward header (with entry_mode)
         const [headerResult] = await conn.execute(
-            'INSERT INTO stock_inward (district, brand, dcr_type, notes, created_by) VALUES (?, ?, ?, ?, ?)',
-            [district, brand, dcr_type, notes || null, created_by]
+            'INSERT INTO stock_inward (district, brand, dcr_type, entry_mode, notes, created_by) VALUES (?, ?, ?, ?, ?, ?)',
+            [district, brand, dcr_type, entry_mode, notes || null, created_by]
         );
         const inwardId = headerResult.insertId;
 
-        // 2. Insert system type rows
-        for (const [sysType, qty] of Object.entries(activeSystems)) {
-            await conn.execute(
-                'INSERT INTO stock_inward_systems (inward_id, system_type, quantity) VALUES (?, ?, ?)',
-                [inwardId, sysType, qty]
-            );
+        // 2. Insert system type rows (only in system mode)
+        if (entry_mode === 'system') {
+            for (const [sysType, qty] of Object.entries(activeSystems)) {
+                await conn.execute(
+                    'INSERT INTO stock_inward_systems (inward_id, system_type, quantity) VALUES (?, ?, ?)',
+                    [inwardId, sysType, qty]
+                );
+            }
         }
 
         // 3. Insert items and update inventory

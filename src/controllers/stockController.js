@@ -81,6 +81,16 @@ async function createInward(req, res) {
             ...req.body,
             created_by: req.user.id,
         });
+
+        // Auto-snapshot: update today's balance after every inward
+        try {
+            const now = new Date();
+            const istDate = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+            await inventoryService.takeDailySnapshot(istDate.toISOString().slice(0, 10));
+        } catch (snapErr) {
+            console.error('[AutoSnapshot] Failed after inward:', snapErr.message);
+        }
+
         return res.status(201).json(record);
     } catch (err) {
         return res.status(err.status || 500).json({ message: err.message });
@@ -120,6 +130,16 @@ async function createOutward(req, res) {
             ...req.body,
             created_by: req.user.id,
         });
+
+        // Auto-snapshot: update today's balance after every outward
+        try {
+            const now = new Date();
+            const istDate = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+            await inventoryService.takeDailySnapshot(istDate.toISOString().slice(0, 10));
+        } catch (snapErr) {
+            console.error('[AutoSnapshot] Failed after outward:', snapErr.message);
+        }
+
         return res.status(201).json(record);
     } catch (err) {
         // Include shortage details if available
