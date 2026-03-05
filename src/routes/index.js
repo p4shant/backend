@@ -15,6 +15,7 @@ const schedulerRoutes = require('./schedulerRoutes');
 const statsRoutes = require('./statsRoutes');
 const downloadRoutes = require('./downloadRoutes');
 const notificationRoutes = require('./notificationRoutes');
+const stockRoutes = require('./stockRoutes');
 const { authenticate } = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -36,5 +37,6 @@ router.use('/stats', statsRoutes);
 router.use('/download', downloadRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/stock', stockRoutes);
 
 module.exports = router;
