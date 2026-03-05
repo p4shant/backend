@@ -14,8 +14,8 @@ const router = Router();
 // All stock routes require authentication
 router.use(authenticate);
 
-// All stock routes restricted to Stock Controller and Master Admin
-const stockAccess = requireRoles(['Stock Controller', 'Master Admin']);
+// All stock routes restricted to Stock Controller, Inventory Operator and Master Admin
+const stockAccess = requireRoles(['Stock Controller', 'Inventory Operator', 'Master Admin']);
 router.use(stockAccess);
 
 // --- Config ---
