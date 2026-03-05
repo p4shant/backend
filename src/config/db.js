@@ -11,11 +11,14 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: env.db.connectionLimit,
     queueLimit: 0,
-    dateStrings: true
+    dateStrings: true,
+    timezone: '+05:30'
 });
 
-pool.on('connection', () => {
-    logger.debug('MySQL connection acquired');
+pool.on('connection', (connection) => {
+    // Set MySQL session timezone to IST so all TIMESTAMP values are returned in IST
+    connection.query("SET time_zone = '+05:30'");
+    logger.debug('MySQL connection acquired (timezone set to IST +05:30)');
 });
 
 async function query(sql, params) {
