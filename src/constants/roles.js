@@ -8,7 +8,8 @@ const EMPLOYEE_ROLES = [
     'Technician',
     'SFDC Admin',
     'Technical Assistant',
-    'Electrician Assistant'
+    'Electrician Assistant',
+    'Stock Controller'
 ];
 
 module.exports = {
