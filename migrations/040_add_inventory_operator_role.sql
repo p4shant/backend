@@ -1,4 +1,6 @@
-const EMPLOYEE_ROLES = [
+-- Add 'Inventory Operator' to the employee_role ENUM
+ALTER TABLE employees
+  MODIFY COLUMN employee_role ENUM(
     'Sale Executive',
     'System Admin',
     'Electrician',
@@ -11,9 +13,4 @@ const EMPLOYEE_ROLES = [
     'Electrician Assistant',
     'Stock Controller',
     'Inventory Operator'
-];
-
-module.exports = {
-    EMPLOYEE_ROLES,
-    EMPLOYEE_ROLE_SET: new Set(EMPLOYEE_ROLES)
-};
+  ) NOT NULL;
