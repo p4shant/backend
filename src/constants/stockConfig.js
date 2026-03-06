@@ -30,7 +30,11 @@ const PANEL_WATTAGES = ['570', '575', '580', '585', '590'];
 // Inverter types = System types (sub-types for inverter)
 // 1 inverter per system, and its sub_type matches the system type
 // ---------------------------------------------------------------------------
-const INVERTER_TYPES = ['2KW', '3KW', '4KW', '5(I)KW', '5(III)KW', '6KW', '8KW', '10KW'];
+const INVERTER_TYPES = ['2KW', '3KW', '4KW', '5(I)KW', '5(III)KW', '6KW', '8KW', '10KW', 'H-3KW', 'H-5KW', 'H-6KW'];
+
+// Hybrid inverter types (for reference)
+const HYBRID_INVERTER_TYPES = ['H-3KW', 'H-5KW', 'H-6KW'];
+const REGULAR_INVERTER_TYPES = ['2KW', '3KW', '4KW', '5(I)KW', '5(III)KW', '6KW', '8KW', '10KW'];
 
 // ---------------------------------------------------------------------------
 // Bill of Materials (BOM) — components required per system type
@@ -133,6 +137,8 @@ module.exports = {
     COMPONENTS_WITH_SUBTYPES,
     PANEL_WATTAGES,
     INVERTER_TYPES,
+    HYBRID_INVERTER_TYPES,
+    REGULAR_INVERTER_TYPES,
     SYSTEM_BOM,
     SYSTEM_TYPES,
     BRANDS,
