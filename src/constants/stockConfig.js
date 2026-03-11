@@ -68,7 +68,7 @@ const DCR_TYPES = ['DCR', 'Non-DCR'];
 // ---------------------------------------------------------------------------
 // District stores
 // ---------------------------------------------------------------------------
-const STORE_DISTRICTS = ['Ghazipur', 'Varanasi', 'Mau', 'Azamgarh', 'Ballia'];
+const STORE_DISTRICTS = ['Ghazipur', 'Varanasi Sarnath', 'Banaras Home', 'Mau', 'Azamgarh', 'Ballia'];
 
 // ---------------------------------------------------------------------------
 // Connectors (hardcoded sales people)
