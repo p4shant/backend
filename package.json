@@ -5,7 +5,7 @@
     "main": "src/server.js",
     "scripts": {
         "start": "node src/server.js",
-        "dev": "nodemon --config nodemon.json src/server.js",
+        "dev": "nodemon --config nodemon.json",
         "migrate": "node scripts/migrate.js",
         "seed": "node scripts/seedDummyEmployees.js",
         "seed:real": "node scripts/seedRealEmployees.js",

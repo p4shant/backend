@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS employees (
     'SFDC Admin',
     'Technical Assistant',
     'Electrician Assistant',
-    'Inventory Operator'
+    'Stock Controller',
+    'Inventory Operator',
+    'QA Tester'
   ) NOT NULL,
 
   -- Authentication
