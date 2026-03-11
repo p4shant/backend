@@ -243,6 +243,172 @@ async function punchOut(req, res) {
     });
 }
 
+// ============================================================================
+// SUPERVISOR TEAM ATTENDANCE — Technicians & Technical Assistants
+// ============================================================================
+
+const SUPERVISOR_NAMES = ['Upendra Nath', 'Aashish Singh', 'Sanjay Singh Yadav', 'SN Singh'];
+const TEAM_ROLES = ['Technician', 'Technical Assistant'];
+
+async function getTeamMembers(req, res) {
+    try {
+        const supervisorName = req.user.name;
+        if (!SUPERVISOR_NAMES.includes(supervisorName)) {
+            return res.status(403).json({ message: 'You are not authorized to manage team attendance' });
+        }
+
+        const db = require('../config/db');
+        const members = await db.query(
+            `SELECT id, name, employee_role, district FROM employees WHERE employee_role IN (?, ?) ORDER BY employee_role, name`,
+            TEAM_ROLES
+        );
+
+        return res.json({ success: true, data: members });
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to fetch team members' });
+    }
+}
+
+async function getTeamAttendance(req, res) {
+    try {
+        const supervisorName = req.user.name;
+        if (!SUPERVISOR_NAMES.includes(supervisorName)) {
+            return res.status(403).json({ message: 'You are not authorized to view team attendance' });
+        }
+
+        const { date } = req.query;
+        if (!date) {
+            return res.status(400).json({ message: 'date query parameter is required (YYYY-MM-DD)' });
+        }
+
+        const db = require('../config/db');
+
+        // Get all team members
+        const members = await db.query(
+            `SELECT id, name, employee_role, district FROM employees WHERE employee_role IN (?, ?) ORDER BY employee_role, name`,
+            TEAM_ROLES
+        );
+
+        // Get existing attendance records for that date
+        const memberIds = members.map(m => m.id);
+        let records = [];
+        if (memberIds.length > 0) {
+            const placeholders = memberIds.map(() => '?').join(',');
+            const query = `SELECT ea.*, e.name AS employee_name, e.employee_role 
+                 FROM employee_attendance ea 
+                 JOIN employees e ON e.id = ea.employee_id 
+                 WHERE ea.attendance_date = ? AND ea.employee_id IN (${placeholders})`;
+            records = await db.query(query, [date, ...memberIds]);
+        }
+
+        const recordMap = new Map();
+        records.forEach(r => recordMap.set(r.employee_id, r));
+
+        // Merge: for each member, attach their attendance status for that date
+        const result = members.map(member => {
+            const record = recordMap.get(member.id);
+            return {
+                employee_id: member.id,
+                employee_name: member.name,
+                employee_role: member.employee_role,
+                district: member.district,
+                attendance_id: record?.id || null,
+                attendance_mode: record?.attendance_mode || null,
+                marked_status: record?.marked_status || null,
+                marked_by: record?.marked_by || null,
+                punch_in_time: record?.punch_in_time || null,
+                punch_out_time: record?.punch_out_time || null,
+            };
+        });
+
+        return res.json({ success: true, data: result });
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to fetch team attendance' });
+    }
+}
+
+async function markTeamAttendance(req, res) {
+    try {
+        const supervisorName = req.user.name;
+        const supervisorId = req.user.id;
+
+        if (!SUPERVISOR_NAMES.includes(supervisorName)) {
+            return res.status(403).json({ message: 'You are not authorized to mark team attendance' });
+        }
+
+        const { date, attendance } = req.body;
+        // attendance = [{ employee_id: number, status: 'present' | 'absent' }]
+
+        if (!date || !attendance || !Array.isArray(attendance)) {
+            return res.status(400).json({ message: 'date and attendance array are required' });
+        }
+
+        const db = require('../config/db');
+
+        // Validate all employee_ids are Technicians or Technical Assistants
+        const employeeIds = attendance.map(a => a.employee_id);
+
+        let employees = [];
+        if (employeeIds.length > 0) {
+            const placeholders = employeeIds.map(() => '?').join(',');
+            const query = `SELECT id, employee_role FROM employees WHERE id IN (${placeholders})`;
+            employees = await db.query(query, employeeIds);
+        }
+
+        const validIds = new Set(employees.filter(e => TEAM_ROLES.includes(e.employee_role)).map(e => e.id));
+        const invalidEntries = attendance.filter(a => !validIds.has(a.employee_id));
+        if (invalidEntries.length > 0) {
+            return res.status(400).json({
+                message: `Some employees are not Technician/Technical Assistant: ${invalidEntries.map(e => e.employee_id).join(', ')}`
+            });
+        }
+
+        const results = [];
+        for (const entry of attendance) {
+            const { employee_id, status } = entry;
+
+            // Check for existing record on this date
+            const existing = await attendanceService.getByEmployeeAndDate(employee_id, date);
+
+            if (existing) {
+                // Update existing record
+                const updated = await attendanceService.update(existing.id, {
+                    attendance_mode: 'supervisor',
+                    marked_by: supervisorId,
+                    marked_status: status,
+                    // Clear self-attendance fields if marking absent
+                    punch_in_time: status === 'present' ? existing.punch_in_time : null,
+                    punch_out_time: status === 'present' ? existing.punch_out_time : null,
+                    is_late: 0,
+                    forgot_to_punch_out: 0,
+                });
+                results.push(updated);
+            } else {
+                // Create new record
+                const created = await attendanceService.create({
+                    employee_id,
+                    attendance_date: date,
+                    attendance_mode: 'supervisor',
+                    marked_by: supervisorId,
+                    marked_status: status,
+                    punch_in_time: null,
+                    punch_out_time: null,
+                    is_late: 0,
+                    forgot_to_punch_out: 0,
+                });
+                results.push(created);
+            }
+        }
+
+        return res.json({ message: `Attendance marked for ${results.length} employees`, results });
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to mark team attendance' });
+    }
+}
+
 module.exports.getTodayStatus = getTodayStatus;
 module.exports.punchIn = punchIn;
 module.exports.punchOut = punchOut;
+module.exports.getTeamMembers = getTeamMembers;
+module.exports.getTeamAttendance = getTeamAttendance;
+module.exports.markTeamAttendance = markTeamAttendance;

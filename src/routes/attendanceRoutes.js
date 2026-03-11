@@ -6,6 +6,11 @@ const router = Router();
 
 router.use(authenticate);
 
+// Supervisor team attendance endpoints (must be BEFORE /:id route)
+router.get('/team/members', controller.getTeamMembers);
+router.get('/team/status', controller.getTeamAttendance);
+router.post('/team/mark', controller.markTeamAttendance);
+
 // Dedicated attendance endpoints
 router.get('/today', controller.getTodayStatus);
 router.post('/punch-in', controller.punchIn);

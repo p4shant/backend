@@ -101,23 +101,28 @@ async function listWithAbsentees(filters = {}) {
 
     const attendanceQuery = `
         SELECT 
-            id,
-            employee_id,
-            attendance_date,
-            punch_in_time,
-            punch_out_time,
-            punch_in_image_url,
-            punch_out_image_url,
-            punch_in_latitude,
-            punch_in_longitude,
-            punch_out_latitude,
-            punch_out_longitude,
-            is_late,
-            forgot_to_punch_out,
-            created_at
-        FROM employee_attendance
-        WHERE attendance_date = ?
-        ${employee_id ? 'AND employee_id = ?' : ''}
+            ea.id,
+            ea.employee_id,
+            ea.attendance_date,
+            ea.punch_in_time,
+            ea.punch_out_time,
+            ea.punch_in_image_url,
+            ea.punch_out_image_url,
+            ea.punch_in_latitude,
+            ea.punch_in_longitude,
+            ea.punch_out_latitude,
+            ea.punch_out_longitude,
+            ea.is_late,
+            ea.forgot_to_punch_out,
+            ea.created_at,
+            ea.attendance_mode,
+            ea.marked_by,
+            ea.marked_status,
+            supervisor.name AS marked_by_name
+        FROM employee_attendance ea
+        LEFT JOIN employees supervisor ON ea.marked_by = supervisor.id
+        WHERE ea.attendance_date = ?
+        ${employee_id ? 'AND ea.employee_id = ?' : ''}
         ORDER BY punch_in_time ASC
     `;
 
@@ -142,13 +147,19 @@ async function listWithAbsentees(filters = {}) {
             // Employee HAS attendance record - determine actual status
             let status = 'present';
 
-            if (!attendance.punch_in_time) {
-                // No punch_in = absent (scheduler-created NULL entry)
-                status = 'absent';
-            } else if (attendance.forgot_to_punch_out === 1) {
-                status = 'forgot_to_punch_out';
-            } else if (attendance.is_late === 1) {
-                status = 'late';
+            // For supervisor-marked attendance, use marked_status directly
+            if (attendance.attendance_mode === 'supervisor') {
+                status = attendance.marked_status || 'absent';
+            } else {
+                // For self punch-in/out, compute status from punch times
+                if (!attendance.punch_in_time) {
+                    // No punch_in = absent (scheduler-created NULL entry)
+                    status = 'absent';
+                } else if (attendance.forgot_to_punch_out === 1) {
+                    status = 'forgot_to_punch_out';
+                } else if (attendance.is_late === 1) {
+                    status = 'late';
+                }
             }
 
             return {
@@ -174,7 +185,11 @@ async function listWithAbsentees(filters = {}) {
                 status: status,
                 attendance_date: attendance.attendance_date,
                 is_late: attendance.is_late,
-                forgot_to_punch_out: attendance.forgot_to_punch_out
+                forgot_to_punch_out: attendance.forgot_to_punch_out,
+                attendance_mode: attendance.attendance_mode || 'self',
+                marked_by: attendance.marked_by,
+                marked_by_name: attendance.marked_by_name,
+                marked_status: attendance.marked_status
             };
         } else {
             // Employee has NO attendance record - return ABSENT with N/A values
@@ -288,8 +303,9 @@ async function create(data) {
         punch_out_time, punch_out_image_url,
         punch_in_latitude, punch_in_longitude,
         punch_out_latitude, punch_out_longitude,
-        is_late, forgot_to_punch_out
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_late, forgot_to_punch_out,
+        attendance_mode, marked_by, marked_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const params = [
@@ -304,7 +320,10 @@ async function create(data) {
         data.punch_out_latitude || null,
         data.punch_out_longitude || null,
         is_late,
-        forgot_to_punch_out
+        forgot_to_punch_out,
+        data.attendance_mode || 'self',
+        data.marked_by || null,
+        data.marked_status || null
     ];
 
     const result = await db.query(query, params);
