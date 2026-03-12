@@ -135,10 +135,39 @@ function uploadAttendanceImage(fieldName = 'photo') {
     return uploadAttendance.single(fieldName);
 }
 
+// Travel speedometer uploader: stores under /uploads/travel/<employeeId>
+const travelStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const employeeId = req.user?.id || req.body.employee_id;
+        const folderPath = path.join(rootUploads, 'travel', String(employeeId || 'unknown'));
+        ensureDir(folderPath);
+        cb(null, folderPath);
+    },
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname) || '';
+        const base = path
+            .basename(file.originalname, ext)
+            .replace(/[^a-zA-Z0-9_-]/g, '')
+            .slice(0, 50) || 'speedometer';
+        const ts = Date.now();
+        cb(null, `${base}_${ts}${ext}`);
+    },
+});
+
+const uploadTravel = multer({
+    storage: travelStorage,
+    fileFilter,
+});
+
+function uploadTravelImage(fieldName = 'photo') {
+    return uploadTravel.single(fieldName);
+}
+
 module.exports = {
     uploadSingleImage,
     uploadMultipleImages,
     uploadAttendanceImage,
+    uploadTravelImage,
     rootUploads,
     ensureDir,
 };
