@@ -4,16 +4,15 @@ const notificationService = require('../services/notificationService');
 
 /**
  * Initialize notification scheduler
- * Runs at 7 PM (19:00) IST daily to send punch-out reminders
+ * Runs at 6 PM IST daily to send punch-out reminders
  * Only sends to employees who punched in but forgot to punch out
  */
 function initializeNotificationScheduler() {
     try {
-        // 7 PM IST = 19:00 UTC (during IST offset)
-        // Using cron expression: 0 19 * * * (7 PM every day)
-        const punchOutJob = cron.schedule('0 19 * * *', async () => {
+        // Run directly in Asia/Kolkata timezone so the job always fires at 6:00 PM IST.
+        const punchOutJob = cron.schedule('0 18 * * *', async () => {
             try {
-                logger.info('[Notification Scheduler] Triggering punch-out reminders at 7 PM IST');
+                logger.info('[Notification Scheduler] Triggering punch-out reminders at 6 PM IST');
 
                 const result = await notificationService.sendForgotPunchOutReminders(
                     'You forgot to punch out today. Please mark your punch-out time before leaving.'
@@ -23,10 +22,13 @@ function initializeNotificationScheduler() {
             } catch (err) {
                 logger.error('[Notification Scheduler] Error sending punch-out reminders:', err.message);
             }
+        }, {
+            scheduled: true,
+            timezone: 'Asia/Kolkata'
         });
 
         logger.info('[Notification Scheduler] Scheduler initialized');
-        logger.info('  - Punch-out reminders: Daily at 7 PM IST (for employees who punched in but forgot to punch out)');
+        logger.info('  - Punch-out reminders: Daily at 6 PM IST (only for employees who punched in but have not punched out)');
 
         return { punchOutJob };
     } catch (err) {

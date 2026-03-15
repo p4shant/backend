@@ -337,32 +337,39 @@ class NotificationService {
     }
 
     /**
-     * Send notifications to employees who forgot to punch out
+     * Send reminders only to employees who punched in today but have not punched out yet.
+     * Creates at most one punch-out reminder notification per employee per day.
      */
     async sendForgotPunchOutReminders(message = 'You forgot to punch out today. Please mark your punch-out time.') {
         try {
-            // Get all attendance records for today where punch_in exists but punch_out is missing
             const query = `
-        SELECT ea.id as attendance_id, ea.employee_id, e.name 
-        FROM employee_attendance ea
-        JOIN employees e ON ea.employee_id = e.id
-        WHERE DATE(ea.attendance_date) = CURDATE()
-        AND ea.punch_in_time IS NOT NULL
-        AND ea.punch_out_time IS NULL
-        AND ea.forgot_to_punch_out = 0
-      `;
+                SELECT ea.id AS attendance_id, ea.employee_id, e.name
+                FROM employee_attendance ea
+                JOIN employees e ON ea.employee_id = e.id
+                LEFT JOIN notifications n
+                    ON n.employee_id = ea.employee_id
+                    AND n.notification_type = 'ATTENDANCE_MARKED'
+                    AND n.title = 'Punch-Out Reminder'
+                    AND DATE(n.created_at) = CURDATE()
+                    AND n.related_entity_type = 'attendance'
+                    AND n.related_entity_id = ea.id
+                WHERE ea.attendance_date = CURDATE()
+                  AND ea.punch_in_time IS NOT NULL
+                  AND ea.punch_out_time IS NULL
+                  AND n.id IS NULL
+            `;
 
             const attendanceRecords = await db.query(query);
 
             if (attendanceRecords.length === 0) {
-                return { message: 'No employees found who forgot to punch out', count: 0 };
+                return { message: 'No employees found who need a punch-out reminder', count: 0 };
             }
 
             const notifications = attendanceRecords.map((record) => ({
                 employee_id: record.employee_id,
                 notification_type: 'ATTENDANCE_MARKED',
                 title: 'Punch-Out Reminder',
-                message: message,
+                message,
                 related_entity_type: 'attendance',
                 related_entity_id: record.attendance_id,
                 priority: 'high'
@@ -370,18 +377,10 @@ class NotificationService {
 
             const results = await this.createBulk(notifications);
 
-            // Mark forgot_to_punch_out flag as 1 for these records
-            if (results.length > 0) {
-                const attendanceIds = attendanceRecords.map(r => r.attendance_id);
-                const placeholders = attendanceIds.map(() => '?').join(',');
-                const updateQuery = `UPDATE employee_attendance SET forgot_to_punch_out = 1 WHERE id IN (${placeholders})`;
-                await db.query(updateQuery, attendanceIds);
-            }
-
             return {
                 message: 'Punch-out reminders sent',
                 count: results.length,
-                employees: attendanceRecords.map(r => ({ id: r.employee_id, name: r.name }))
+                employees: attendanceRecords.map((record) => ({ id: record.employee_id, name: record.name }))
             };
         } catch (err) {
             console.error('Error sending punch-out reminders:', err);

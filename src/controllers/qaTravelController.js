@@ -76,7 +76,7 @@ function punchIn(req, res) {
                     punch_in_image_url: imageUrl,
                     punch_in_latitude: location.latitude,
                     punch_in_longitude: location.longitude,
-                    forgot_to_punch_out: 1,
+                    forgot_to_punch_out: 0,
                     attendance_mode: 'self',
                 });
             } catch (attErr) {
