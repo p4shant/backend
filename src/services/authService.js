@@ -43,7 +43,8 @@ async function register({ name, phone_number, district, employee_role, password 
         id: employee.id,
         name: employee.name,
         phone_number: employee.phone_number,
-        employee_role: employee.employee_role
+        employee_role: employee.employee_role,
+        stock_access: employee.stock_access ? 1 : 0,
     });
 
     return { employee, token };
@@ -70,7 +71,8 @@ async function login({ phone_number, password }) {
         id: clean.id,
         name: clean.name,
         phone_number: clean.phone_number,
-        employee_role: clean.employee_role
+        employee_role: clean.employee_role,
+        stock_access: clean.stock_access ? 1 : 0,
     });
 
     return { employee: clean, token };

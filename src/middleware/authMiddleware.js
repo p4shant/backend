@@ -18,6 +18,8 @@ function authenticate(req, res, next) {
     }
 }
 
+const STOCK_ROLES = ['Stock Controller', 'Inventory Operator', 'Master Admin', 'Accountant'];
+
 function requireRoles(allowedRoles = []) {
     return (req, res, next) => {
         if (!req.user || !allowedRoles.includes(req.user.employee_role)) {
@@ -27,7 +29,24 @@ function requireRoles(allowedRoles = []) {
     };
 }
 
+/**
+ * Allows access if the user has a stock-designated role OR has stock_access=1 flag.
+ * This lets individual employees (any role) be granted stock access without changing their role.
+ */
+function requireStockAccess(req, res, next) {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const hasStockRole = STOCK_ROLES.includes(req.user.employee_role);
+    const hasFlag = req.user.stock_access === 1;
+    if (hasStockRole || hasFlag) {
+        return next();
+    }
+    return res.status(403).json({ message: 'Forbidden: no stock access' });
+}
+
 module.exports = {
     authenticate,
-    requireRoles
+    requireRoles,
+    requireStockAccess,
 };

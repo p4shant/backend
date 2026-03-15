@@ -9,6 +9,7 @@ const inventoryService = require('../services/stockInventoryService');
 const inwardService = require('../services/stockInwardService');
 const outwardService = require('../services/stockOutwardService');
 const movementLogService = require('../services/stockMovementLogService');
+const correctionService = require('../services/stockCorrectionService');
 const db = require('../config/db');
 const {
     STOCK_COMPONENTS, SYSTEM_TYPES, BRANDS, DCR_TYPES, STORE_DISTRICTS, CONNECTORS,
@@ -270,6 +271,33 @@ async function triggerSnapshot(req, res) {
     }
 }
 
+// ============================================================================
+// STOCK CORRECTIONS (Master Admin only)
+// ============================================================================
+async function correctMovementLog(req, res) {
+    try {
+        const { logId } = req.params;
+        const { new_quantity_change, reason } = req.body;
+
+        if (new_quantity_change === undefined || new_quantity_change === null) {
+            return res.status(400).json({ message: 'new_quantity_change is required' });
+        }
+        if (!reason || !reason.trim()) {
+            return res.status(400).json({ message: 'reason is required for audit trail' });
+        }
+
+        const result = await correctionService.correctMovementLog(
+            Number(logId),
+            Number(new_quantity_change),
+            req.user.id,
+            reason.trim()
+        );
+        return res.json(result);
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message });
+    }
+}
+
 module.exports = {
     getConfig,
     getInventory,
@@ -287,4 +315,5 @@ module.exports = {
     searchCustomers,
     getDailySnapshots,
     triggerSnapshot,
+    correctMovementLog,
 };
