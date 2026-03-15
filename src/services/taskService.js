@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const notificationService = require('./notificationService');
+const logger = require('../utils/logger');
 
 const VALID_STATUSES = ['pending', 'inprogress', 'completed'];
 
@@ -147,6 +149,26 @@ function validateRequiredFields(data) {
             err.status = 400;
             throw err;
         }
+    }
+}
+
+async function createTaskAssignedNotification(task) {
+    if (!task?.assigned_to_id) return;
+
+    const customerName = task?.registered_customer_data?.applicant_name || 'Customer';
+    const message = `New task assigned: ${task.work}. Customer: ${customerName}. Please review and start work.`;
+
+    try {
+        await notificationService.sendTaskNotification(
+            task.id,
+            'TASK_ASSIGNED',
+            task.assigned_to_id,
+            'New Task Assigned',
+            message
+        );
+    } catch (err) {
+        // Do not fail task creation if notification fails
+        logger.warn(`[Task Notification] Failed for task ${task.id}: ${err.message}`);
     }
 }
 
@@ -441,7 +463,9 @@ async function create(data) {
         data.registered_customer_id
     ]);
 
-    return getById(result.insertId);
+    const createdTask = await getById(result.insertId);
+    await createTaskAssignedNotification(createdTask);
+    return createdTask;
 }
 
 async function validateDocumentRequirements(workType, customerId) {

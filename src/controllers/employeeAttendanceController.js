@@ -198,7 +198,7 @@ async function punchIn(req, res) {
                 punch_in_latitude: location?.latitude || null,
                 punch_in_longitude: location?.longitude || null,
                 // is_late will be computed by service from punch_in_time
-                forgot_to_punch_out: 1,
+                forgot_to_punch_out: 0,
             });
 
             return res.status(201).json(created);
