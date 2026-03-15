@@ -7,16 +7,15 @@
 
 const { Router } = require('express');
 const controller = require('../controllers/stockController');
-const { authenticate, requireRoles } = require('../middleware/authMiddleware');
+const { authenticate, requireRoles, requireStockAccess } = require('../middleware/authMiddleware');
 
 const router = Router();
 
 // All stock routes require authentication
 router.use(authenticate);
 
-// All stock routes restricted to Stock Controller, Inventory Operator, Master Admin and Accountant
-const stockAccess = requireRoles(['Stock Controller', 'Inventory Operator', 'Master Admin', 'Accountant']);
-router.use(stockAccess);
+// Allow access if user has a stock role OR has stock_access flag on their employee record
+router.use(requireStockAccess);
 
 // --- Config ---
 router.get('/config', controller.getConfig);
@@ -42,6 +41,10 @@ router.post('/dealers', controller.createDealer);
 
 // --- Movement Log ---
 router.get('/movement-log', controller.listMovementLog);
+
+// --- Stock Corrections (Master Admin only) ---
+const masterAdminOnly = requireRoles(['Master Admin']);
+router.put('/movement-log/:logId/correct', masterAdminOnly, controller.correctMovementLog);
 
 // --- Daily Snapshots ---
 router.get('/snapshots', controller.getDailySnapshots);
