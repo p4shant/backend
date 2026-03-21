@@ -15,24 +15,38 @@ const { ROLE_ASSIGNMENTS } = require('../config/roleAssignments');
  * @param {string} requiredRole - The role needed (e.g., 'Electrician', 'System Admin')
  * @param {object} customerData - Registered customer data for district-based logic
  * @param {object} loggedInUser - Current logged-in user (for Sales Executive assignment)
- * @returns {Promise<number>} Employee ID to assign task to
+ * @returns {Promise<number[]>} Employee IDs to assign task to
  */
-async function getEmployeeIdByRoleAndRules(requiredRole, customerData, loggedInUser) {
+async function getEmployeeIdsByRoleAndRules(requiredRole, customerData, loggedInUser) {
     const logger = require('./logger'); // Import inside function
     try {
         switch (requiredRole) {
             case 'System Admin':
-                // Fixed assignment: Mohammad Bilal Ansari
-                const systemAdmin = await employeeService.findByPhone(
-                    ROLE_ASSIGNMENTS.SYSTEM_ADMIN.phone
-                );
-                if (systemAdmin) {
-                    return systemAdmin.id;
+                // Flexible assignment: resolve configured System Admin users by phone
+                {
+                    const configuredUsers = Array.isArray(ROLE_ASSIGNMENTS.SYSTEM_ADMIN?.users)
+                        ? ROLE_ASSIGNMENTS.SYSTEM_ADMIN.users
+                        : [ROLE_ASSIGNMENTS.SYSTEM_ADMIN].filter(Boolean);
+
+                    const resolvedAdmins = [];
+                    for (const user of configuredUsers) {
+                        if (!user?.phone) continue;
+                        const systemAdmin = await employeeService.findByPhone(user.phone);
+                        if (systemAdmin) {
+                            resolvedAdmins.push(systemAdmin.id);
+                        } else {
+                            logger.warn(`System Admin not found by phone ${user.phone}`);
+                        }
+                    }
+
+                    if (resolvedAdmins.length > 0) {
+                        return [...new Set(resolvedAdmins)];
+                    }
                 }
-                logger.warn(`System Admin not found by phone ${ROLE_ASSIGNMENTS.SYSTEM_ADMIN.phone}`);
-                // Fallback: get any system admin
+
+                // Fallback: get all system admins
                 const sysAdmins = await employeeService.findByRole('System Admin');
-                return sysAdmins.length > 0 ? sysAdmins[0].id : null;
+                return sysAdmins.map(admin => admin.id);
 
             case 'Electrician':
                 // Find electrician from same district as customer
@@ -42,13 +56,13 @@ async function getEmployeeIdByRoleAndRules(requiredRole, customerData, loggedInU
                         customerData.district
                     );
                     if (electricians.length > 0) {
-                        return electricians[0].id;
+                        return [electricians[0].id];
                     }
                     logger.warn(`No Electrician found in district: ${customerData.district}`);
                 }
                 // Fallback: get any electrician
                 const allElectricians = await employeeService.findByRole('Electrician');
-                return allElectricians.length > 0 ? allElectricians[0].id : null;
+                return allElectricians.length > 0 ? [allElectricians[0].id] : [];
 
             case 'Operation Manager':
                 // District-based assignment
@@ -59,51 +73,51 @@ async function getEmployeeIdByRoleAndRules(requiredRole, customerData, loggedInU
 
                 const opManager = await employeeService.findByPhone(assignmentConfig.phone);
                 if (opManager) {
-                    return opManager.id;
+                    return [opManager.id];
                 }
                 logger.warn(`Operation Manager not found by phone ${assignmentConfig.phone}`);
                 // Fallback: get any operation manager
                 const opManagers = await employeeService.findByRole('Operation Manager');
-                return opManagers.length > 0 ? opManagers[0].id : null;
+                return opManagers.length > 0 ? [opManagers[0].id] : [];
 
             case 'Accountant':
                 // Get any accountant
                 const accountants = await employeeService.findByRole('Accountant');
-                return accountants.length > 0 ? accountants[0].id : null;
+                return accountants.length > 0 ? [accountants[0].id] : [];
 
             case 'Technician':
                 // Get any technician
                 const technicians = await employeeService.findByRole('Technician');
-                return technicians.length > 0 ? technicians[0].id : null;
+                return technicians.length > 0 ? [technicians[0].id] : [];
 
             case 'Technical Assistant':
                 // Get any technical assistant
                 const technicalAssistants = await employeeService.findByRole('Technical Assistant');
-                return technicalAssistants.length > 0 ? technicalAssistants[0].id : null;
+                return technicalAssistants.length > 0 ? [technicalAssistants[0].id] : [];
 
             case 'Sale Executive':
                 // Use logged-in user
                 if (loggedInUser && loggedInUser.id) {
-                    return loggedInUser.id;
+                    return [loggedInUser.id];
                 }
                 logger.warn('Sale Executive required but no logged-in user provided');
                 // Fallback: get any sale executive
                 const salesExecutives = await employeeService.findByRole('Sale Executive');
-                return salesExecutives.length > 0 ? salesExecutives[0].id : null;
+                return salesExecutives.length > 0 ? [salesExecutives[0].id] : [];
 
             case 'Master Admin':
                 // Single Master Admin in DB
                 const masterAdmin = await employeeService.findSingleByRole('Master Admin');
-                return masterAdmin ? masterAdmin.id : null;
+                return masterAdmin ? [masterAdmin.id] : [];
 
             case 'SFDC Admin':
                 // Single SFDC Admin in DB
                 const sfdcAdmin = await employeeService.findSingleByRole('SFDC Admin');
-                return sfdcAdmin ? sfdcAdmin.id : null;
+                return sfdcAdmin ? [sfdcAdmin.id] : [];
 
             default:
                 logger.warn(`Unknown role: ${requiredRole}`);
-                return null;
+                return [];
         }
     } catch (err) {
         logger.error(`Error getting employee ID for role ${requiredRole}: ${err.message}`);
@@ -152,28 +166,28 @@ async function createNextTasksInWorkflow(completedWorkType, registeredCustomerId
         for (const nextTask of taskConfig.nextWorkTypes) {
             try {
                 // Get the employee to assign
-                let assignedToId;
+                let assignedToIds;
 
                 // For Sale Executive, use the created_by from customerData (employee who registered the customer)
                 if (nextTask.requiredRole === 'Sale Executive') {
                     if (customerData && customerData.created_by) {
-                        assignedToId = customerData.created_by;
+                        assignedToIds = [customerData.created_by];
                     } else {
-                        assignedToId = await getEmployeeIdByRoleAndRules(
+                        assignedToIds = await getEmployeeIdsByRoleAndRules(
                             nextTask.requiredRole,
                             customerData,
                             loggedInUser
                         );
                     }
                 } else {
-                    assignedToId = await getEmployeeIdByRoleAndRules(
+                    assignedToIds = await getEmployeeIdsByRoleAndRules(
                         nextTask.requiredRole,
                         customerData,
                         loggedInUser
                     );
                 }
 
-                if (!assignedToId) {
+                if (!assignedToIds || assignedToIds.length === 0) {
                     errors.push({
                         worktype: nextTask.worktype,
                         requiredRole: nextTask.requiredRole,
@@ -193,13 +207,17 @@ async function createNextTasksInWorkflow(completedWorkType, registeredCustomerId
                 }
 
                 // Create the task
-                const newTask = await taskCreatorFunction(registeredCustomerId, assignedToId);
+                const newTask = await taskCreatorFunction(registeredCustomerId, assignedToIds);
+
+                if (!newTask) {
+                    continue;
+                }
 
                 createdTasks.push({
                     worktype: nextTask.worktype,
                     taskId: newTask.id,
                     requiredRole: nextTask.requiredRole,
-                    assignedToId: assignedToId
+                    assignedToIds: assignedToIds
                 });
 
                 logger.info(`Created task: ${nextTask.worktype} (ID: ${newTask.id}) for customer ${registeredCustomerId}`);
@@ -227,6 +245,6 @@ async function createNextTasksInWorkflow(completedWorkType, registeredCustomerId
 }
 
 module.exports = {
-    getEmployeeIdByRoleAndRules,
+    getEmployeeIdsByRoleAndRules,
     createNextTasksInWorkflow
 };

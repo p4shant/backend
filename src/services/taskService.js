@@ -30,9 +30,55 @@ function validateStatusTransition(currentStatus, newStatus) {
     return { valid: true };
 }
 
+function parseAssignedToIdsFromRow(row) {
+    if (!row) return [];
+
+    const raw = row.assigned_to_ids;
+
+    if (Array.isArray(raw)) {
+        return [...new Set(raw.map(Number).filter(id => Number.isInteger(id) && id > 0))];
+    }
+
+    if (typeof raw === 'string' && raw.trim()) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                return [...new Set(parsed.map(Number).filter(id => Number.isInteger(id) && id > 0))];
+            }
+        } catch {
+            // Ignore malformed JSON, fallback below
+        }
+    }
+
+    if (row.assigned_to_id !== null && row.assigned_to_id !== undefined) {
+        const id = Number(row.assigned_to_id);
+        if (Number.isInteger(id) && id > 0) {
+            return [id];
+        }
+    }
+
+    return [];
+}
+
+function normalizeAssigneeIdsInput(data = {}) {
+    const source = Array.isArray(data.assigned_to_id)
+        ? data.assigned_to_id
+        : Array.isArray(data.assigned_to_ids)
+            ? data.assigned_to_ids
+            : data.assigned_to_id !== undefined && data.assigned_to_id !== null
+                ? [data.assigned_to_id]
+                : data.assigned_to_ids !== undefined && data.assigned_to_ids !== null
+                    ? [data.assigned_to_ids]
+                    : [];
+
+    return [...new Set(source.map(Number).filter(id => Number.isInteger(id) && id > 0))];
+}
+
 // Helper function to structure task with nested customer data
 function structureTaskWithCustomerData(row) {
     if (!row) return null;
+
+    const assignedToIds = parseAssignedToIdsFromRow(row);
 
     const task = {
         id: row.id,
@@ -40,6 +86,7 @@ function structureTaskWithCustomerData(row) {
         work_type: row.work_type,
         status: row.status,
         assigned_to_id: row.assigned_to_id,
+        assigned_to_ids: assignedToIds,
         assigned_to_name: row.assigned_to_name,
         assigned_to_role: row.assigned_to_role,
         registered_customer_id: row.registered_customer_id,
@@ -141,7 +188,7 @@ function structureTaskWithCustomerData(row) {
 }
 
 function validateRequiredFields(data) {
-    const required = ['work', 'work_type', 'assigned_to_id', 'registered_customer_id'];
+    const required = ['work', 'work_type', 'registered_customer_id'];
 
     for (const field of required) {
         if (!data[field] && data[field] !== 0) {
@@ -150,22 +197,37 @@ function validateRequiredFields(data) {
             throw err;
         }
     }
+
+    const assignedToIds = normalizeAssigneeIdsInput(data);
+    if (assignedToIds.length === 0) {
+        const err = new Error('assigned_to_id (single ID or array of IDs) is required');
+        err.status = 400;
+        throw err;
+    }
 }
 
 async function createTaskAssignedNotification(task) {
-    if (!task?.assigned_to_id) return;
+    const assignedToIds = Array.isArray(task?.assigned_to_ids) && task.assigned_to_ids.length > 0
+        ? task.assigned_to_ids
+        : task?.assigned_to_id
+            ? [task.assigned_to_id]
+            : [];
+
+    if (assignedToIds.length === 0) return;
 
     const customerName = task?.registered_customer_data?.applicant_name || 'Customer';
     const message = `New task assigned: ${task.work}. Customer: ${customerName}. Please review and start work.`;
 
     try {
-        await notificationService.sendTaskNotification(
-            task.id,
-            'TASK_ASSIGNED',
-            task.assigned_to_id,
-            'New Task Assigned',
-            message
-        );
+        for (const employeeId of assignedToIds) {
+            await notificationService.sendTaskNotification(
+                task.id,
+                'TASK_ASSIGNED',
+                employeeId,
+                'New Task Assigned',
+                message
+            );
+        }
     } catch (err) {
         // Do not fail task creation if notification fails
         logger.warn(`[Task Notification] Failed for task ${task.id}: ${err.message}`);
@@ -185,8 +247,8 @@ async function list(filters = {}) {
     }
 
     if (assigned_to_id) {
-        whereConditions.push('t.assigned_to_id = ?');
-        params.push(assigned_to_id);
+        whereConditions.push('(t.assigned_to_id = ? OR JSON_CONTAINS(COALESCE(t.assigned_to_ids, JSON_ARRAY(t.assigned_to_id)), ?))');
+        params.push(assigned_to_id, JSON.stringify(Number(assigned_to_id)));
     }
 
     if (customer_id) {
@@ -410,10 +472,17 @@ async function getById(id) {
 async function create(data) {
     validateRequiredFields(data);
 
-    // Validate employee exists
-    const employee = await db.query('SELECT id, name, employee_role FROM employees WHERE id = ?', [data.assigned_to_id]);
-    if (employee.length === 0) {
-        const err = new Error('Invalid assigned_to_id: Employee not found');
+    const assignedToIds = normalizeAssigneeIdsInput(data);
+    const primaryAssignedToId = assignedToIds[0];
+
+    // Validate all assigned employees exist
+    const placeholders = assignedToIds.map(() => '?').join(',');
+    const employees = await db.query(
+        `SELECT id, name, employee_role FROM employees WHERE id IN (${placeholders})`,
+        assignedToIds
+    );
+    if (employees.length !== assignedToIds.length) {
+        const err = new Error('Invalid assigned_to_id: One or more employees not found');
         err.status = 400;
         throw err;
     }
@@ -429,7 +498,7 @@ async function create(data) {
     // Check if task already exists for this customer, work_type, and employee
     const existingTask = await db.query(
         'SELECT id FROM tasks WHERE registered_customer_id = ? AND work_type = ? AND assigned_to_id = ?',
-        [data.registered_customer_id, data.work_type, data.assigned_to_id]
+        [data.registered_customer_id, data.work_type, primaryAssignedToId]
     );
     if (existingTask.length > 0) {
         const err = new Error('Task already exists for this customer, work type, and employee');
@@ -438,7 +507,8 @@ async function create(data) {
     }
 
     // Auto-populate employee details
-    const emp = employee[0];
+    const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+    const emp = employeeMap.get(primaryAssignedToId);
     const assigned_to_name = data.assigned_to_name || emp.name;
     const assigned_to_role = data.assigned_to_role || emp.employee_role;
 
@@ -448,16 +518,17 @@ async function create(data) {
     const query = `
     INSERT INTO tasks (
       work, work_type, status, 
-      assigned_to_id, assigned_to_name, assigned_to_role,
+            assigned_to_id, assigned_to_ids, assigned_to_name, assigned_to_role,
       registered_customer_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
     const result = await db.query(query, [
         data.work,
         data.work_type,
         status,
-        data.assigned_to_id,
+        primaryAssignedToId,
+        JSON.stringify(assignedToIds),
         assigned_to_name,
         assigned_to_role,
         data.registered_customer_id
@@ -590,16 +661,34 @@ async function update(id, data) {
         }
     }
 
-    // If assigned_to_id is changed, update name and role
-    if (updateData.assigned_to_id && updateData.assigned_to_id !== existing.assigned_to_id) {
-        const employee = await db.query('SELECT name, employee_role FROM employees WHERE id = ?', [updateData.assigned_to_id]);
-        if (employee.length === 0) {
-            const err = new Error('Invalid assigned_to_id: Employee not found');
+    // If assignees are changed, update primary id + all ids + display name/role
+    const isAssigneeUpdate = updateData.assigned_to_id !== undefined || updateData.assigned_to_ids !== undefined;
+    if (isAssigneeUpdate) {
+        const assignedToIds = normalizeAssigneeIdsInput(updateData);
+        if (assignedToIds.length === 0) {
+            const err = new Error('Invalid assigned_to_id: At least one assignee is required');
             err.status = 400;
             throw err;
         }
-        updateData.assigned_to_name = employee[0].name;
-        updateData.assigned_to_role = employee[0].employee_role;
+
+        const placeholders = assignedToIds.map(() => '?').join(',');
+        const employees = await db.query(
+            `SELECT id, name, employee_role FROM employees WHERE id IN (${placeholders})`,
+            assignedToIds
+        );
+        if (employees.length !== assignedToIds.length) {
+            const err = new Error('Invalid assigned_to_id: One or more employees not found');
+            err.status = 400;
+            throw err;
+        }
+
+        const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+        const primaryEmployee = employeeMap.get(assignedToIds[0]);
+
+        updateData.assigned_to_id = assignedToIds[0];
+        updateData.assigned_to_ids = JSON.stringify(assignedToIds);
+        updateData.assigned_to_name = primaryEmployee.name;
+        updateData.assigned_to_role = primaryEmployee.employee_role;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -848,11 +937,11 @@ async function getByEmployee(employeeId) {
     LEFT JOIN employees e ON rc.created_by = e.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
-    WHERE t.assigned_to_id = ?
+        WHERE (t.assigned_to_id = ? OR JSON_CONTAINS(COALESCE(t.assigned_to_ids, JSON_ARRAY(t.assigned_to_id)), ?))
     AND t.work_type NOT LIKE 'reassign_task_approval%'
     ORDER BY t.created_at DESC
   `;
-    const rows = await db.query(query, [employeeId]);
+    const rows = await db.query(query, [employeeId, JSON.stringify(Number(employeeId))]);
     return rows.map(structureTaskWithCustomerData);
 }
 
@@ -1132,8 +1221,8 @@ async function handleReassignmentAction(taskId, action, user) {
 
         // Update the original task with the new employee assignment
         await db.query(
-            'UPDATE tasks SET assigned_to_id = ?, assigned_to_name = ?, assigned_to_role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [targetEmployee.id, targetEmployee.name, targetEmployee.employee_role, originalTaskId]
+            'UPDATE tasks SET assigned_to_id = ?, assigned_to_ids = ?, assigned_to_name = ?, assigned_to_role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [targetEmployee.id, JSON.stringify([targetEmployee.id]), targetEmployee.name, targetEmployee.employee_role, originalTaskId]
         );
 
         // Delete the reassignment approval task after successful reassignment

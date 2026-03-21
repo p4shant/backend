@@ -154,10 +154,16 @@ async function getByCustomer(req, res) {
 
 async function createReassignTask(req, res) {
     try {
-        const { work, work_type, status, assigned_to_id, assigned_to_name, assigned_to_role, registered_customer_id } = req.body;
+        const { work, work_type, status, assigned_to_id, assigned_to_ids, assigned_to_name, assigned_to_role, registered_customer_id } = req.body;
+
+        const normalizedAssigneeIds = Array.isArray(assigned_to_id)
+            ? assigned_to_id
+            : Array.isArray(assigned_to_ids)
+                ? assigned_to_ids
+                : [assigned_to_id];
 
         // Validate required fields
-        if (!work || !work_type || !status || !assigned_to_id || !assigned_to_name || !assigned_to_role || !registered_customer_id) {
+        if (!work || !work_type || !status || !normalizedAssigneeIds?.length || !assigned_to_name || !assigned_to_role || !registered_customer_id) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
@@ -166,7 +172,7 @@ async function createReassignTask(req, res) {
             work,
             work_type,
             status,
-            assigned_to_id: Number(assigned_to_id),
+            assigned_to_id: normalizedAssigneeIds.map(Number),
             assigned_to_name,
             assigned_to_role,
             registered_customer_id: Number(registered_customer_id),

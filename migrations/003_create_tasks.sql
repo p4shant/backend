@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
   -- Assigned To (Employee)
   assigned_to_id INT NOT NULL,
+  assigned_to_ids JSON NULL,
   assigned_to_name VARCHAR(150) NOT NULL,
   assigned_to_role VARCHAR(100) NOT NULL,
 
