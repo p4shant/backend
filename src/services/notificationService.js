@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const pushService = require('./pushService');
 
 class NotificationService {
     /**
@@ -107,7 +108,20 @@ class NotificationService {
             priority || 'normal'
         ]);
 
-        return this.getById(result.insertId);
+        const notification = await this.getById(result.insertId);
+
+        // Fire web push non-blocking
+        pushService.sendToEmployee(employee_id, {
+            title,
+            body: message || title,
+            data: {
+                notification_type,
+                related_entity_type: related_entity_type || null,
+                related_entity_id: related_entity_id || null
+            }
+        });
+
+        return notification;
     }
 
     /**

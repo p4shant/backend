@@ -27,7 +27,12 @@ const env = {
     logging: {
         level: process.env.LOG_LEVEL || 'info'
     },
-    uploadsRoot: process.env.UPLOADS_ROOT || path.resolve(__dirname, '..', 'uploads')
+    uploadsRoot: process.env.UPLOADS_ROOT || path.resolve(__dirname, '..', 'uploads'),
+    vapid: {
+        publicKey: process.env.VAPID_PUBLIC_KEY || '',
+        privateKey: process.env.VAPID_PRIVATE_KEY || '',
+        email: process.env.VAPID_EMAIL || 'mailto:admin@example.com'
+    }
 };
 
 module.exports = env;
