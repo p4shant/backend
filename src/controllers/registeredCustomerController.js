@@ -12,6 +12,7 @@ const {
     createApprovalOfPaymentCollectionTask
 } = require('../utils/Tasks');
 const employeeService = require('../services/employeeService');
+const { ROLE_ASSIGNMENTS } = require('../config/roleAssignments');
 
 async function list(req, res) {
     try {
@@ -89,13 +90,25 @@ async function create(req, res) {
         const salesExecutiveId = customer.created_by; // Employee who registered the customer
 
         try {
-            // Find System Admin (Mohammad Bilal Ansari)
             const db = require('../config/db');
-            const systemAdminResult = await db.query(
-                'SELECT id FROM employees WHERE phone_number = ? AND employee_role = ?',
-                ['7275094145', 'System Admin']
-            );
-            const systemAdminId = systemAdminResult.length > 0 ? systemAdminResult[0].id : loggedInUserId;
+
+            // Find System Admins from flexible role assignment config
+            const configuredSystemAdmins = Array.isArray(ROLE_ASSIGNMENTS.SYSTEM_ADMIN?.users)
+                ? ROLE_ASSIGNMENTS.SYSTEM_ADMIN.users
+                : [ROLE_ASSIGNMENTS.SYSTEM_ADMIN].filter(Boolean);
+
+            const resolvedSystemAdminIds = [];
+            for (const adminConfig of configuredSystemAdmins) {
+                if (!adminConfig?.phone) continue;
+                const admin = await employeeService.findByPhone(adminConfig.phone);
+                if (admin?.id) {
+                    resolvedSystemAdminIds.push(admin.id);
+                }
+            }
+
+            const systemAdminIds = resolvedSystemAdminIds.length > 0
+                ? [...new Set(resolvedSystemAdminIds)]
+                : [loggedInUserId];
 
             // Find Master Admin
             const masterAdminResult = await db.query(
@@ -124,7 +137,7 @@ async function create(req, res) {
             // For Sale Executive tasks, use the employee who registered the customer (created_by)
             await createCustomerDataGatheringTask(customerId, salesExecutiveId); // Sale Executive who registered
             await createCollectRemainingAmountTask(customerId, salesExecutiveId); // Sale Executive who registered
-            await createCompleteRegistrationTask(customerId, systemAdminId); // System Admin
+            await createCompleteRegistrationTask(customerId, systemAdminIds); // System Admin(s)
             await createApprovalOfPaymentCollectionTask(customerId, masterAdminId); // Master Admin
 
             // Conditionally create tasks based on requirements
@@ -142,7 +155,7 @@ async function create(req, res) {
 
             // Finance task if required
             if (data.payment_mode === 'Finance' || data.special_finance_required === 'Yes') {
-                await createFinanceRegistrationTask(customerId, systemAdminId); // System Admin
+                await createFinanceRegistrationTask(customerId, systemAdminIds); // System Admin(s)
             }
         } catch (taskErr) {
             console.error('Error creating tasks:', taskErr.message);

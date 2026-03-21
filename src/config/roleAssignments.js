@@ -7,9 +7,17 @@
 const ROLE_ASSIGNMENTS = {
     // System Admin - fixed assignment
     SYSTEM_ADMIN: {
-        name: 'Mohammad Bilal Ansari',
-        phone: '7275094145'
-        // Note: Use phone or employee_role to look up ID in DB
+        users: [
+            {
+                name: 'Mohammad Bilal Ansari',
+                phone: '7275094145'
+            },
+            {
+                name: 'Jyoti',
+                phone: '7029269883'
+            }
+        ],
+        // Note: Use phone or employee_role to look up IDs in DB
     },
 
     // SFDC Admin - typically single user

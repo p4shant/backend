@@ -9,6 +9,16 @@ async function buildTaskPayload(work_type, registered_customer_id, assigned_to_i
         throw err;
     }
 
+    const assignedToIds = Array.isArray(assigned_to_id)
+        ? [...new Set(assigned_to_id.map(Number).filter(id => Number.isInteger(id) && id > 0))]
+        : [Number(assigned_to_id)].filter(id => Number.isInteger(id) && id > 0);
+
+    if (assignedToIds.length === 0) {
+        const err = new Error('At least one valid assignee ID is required');
+        err.status = 400;
+        throw err;
+    }
+
     const customer = await registeredCustomerService.getById(Number(registered_customer_id));
     if (!customer) {
         const err = new Error('Customer not found');
@@ -16,7 +26,7 @@ async function buildTaskPayload(work_type, registered_customer_id, assigned_to_i
         throw err;
     }
 
-    const employee = await employeeService.getById(Number(assigned_to_id));
+    const employee = await employeeService.getById(Number(assignedToIds[0]));
     if (!employee) {
         const err = new Error('Employee not found');
         err.status = 404;
@@ -29,7 +39,8 @@ async function buildTaskPayload(work_type, registered_customer_id, assigned_to_i
         work,
         work_type,
         status: 'pending',
-        assigned_to_id: employee.id,
+        assigned_to_id: assignedToIds,
+        assigned_to_ids: assignedToIds,
         assigned_to_name: employee.name,
         assigned_to_role: employee.employee_role,
         registered_customer_id: customer.id,

@@ -1,0 +1,2 @@
+ALTER TABLE tasks
+ADD COLUMN IF NOT EXISTS assigned_to_ids JSON NULL AFTER assigned_to_id;
