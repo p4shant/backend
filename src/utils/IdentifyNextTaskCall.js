@@ -30,19 +30,11 @@ const NEXT_TASK_MAPPING = {
                 functionName: 'createHardCopyindentCreationTask'
             },
             {
-                worktype: 'approval_of_plant_installation',
-                requiredRole: 'Master Admin',
-                functionName: 'createApprovalOfPlantInstallationTask'
+                worktype: 'plant_installation',
+                requiredRole: 'Operation Manager',
+                functionName: 'createPlantInstallationTask'
             }
         ]
-    },
-
-    'approval_of_plant_installation': {
-        nextWorkTypes: [{
-            worktype: 'plant_installation',
-            requiredRole: 'Operation Manager',
-            functionName: 'createPlantInstallationTask'
-        }]
     },
 
     // Utility/COT/Load/Name correction phase

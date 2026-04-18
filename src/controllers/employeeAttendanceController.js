@@ -1,5 +1,6 @@
 const attendanceService = require('../services/employeeAttendanceService');
 const { uploadAttendanceImage } = require('../utils/upload');
+const { isWithinAnyOffice } = require('../utils/geoValidation');
 const path = require('path');
 
 async function list(req, res) {
@@ -185,6 +186,21 @@ async function punchIn(req, res) {
             }
 
             const location = req.body.location ? JSON.parse(req.body.location) : null;
+
+            // Geofence validation: employee must be within 500m of an office
+            if (!location || !location.latitude || !location.longitude) {
+                return res.status(400).json({ message: 'Location is required to mark attendance. Please enable location services.' });
+            }
+            const geoCheck = isWithinAnyOffice(location.latitude, location.longitude);
+            if (!geoCheck.allowed) {
+                return res.status(403).json({
+                    message: `You are ${geoCheck.distance}m away from the nearest office (${geoCheck.nearestOffice}). Please be within ${geoCheck.radius}m of an office to mark attendance.`,
+                    distance: geoCheck.distance,
+                    nearestOffice: geoCheck.nearestOffice,
+                    radius: geoCheck.radius,
+                });
+            }
+
             const utcNow = nowUTCMySQL();
             const punch_in_time = utcNow.iso; // Use ISO format for proper timezone awareness
             const imageUrl = req.file ? buildAttendanceImageUrl(req, req.file.filename) : null;
@@ -224,6 +240,21 @@ async function punchOut(req, res) {
             }
 
             const location = req.body.location ? JSON.parse(req.body.location) : null;
+
+            // Geofence validation: employee must be within 500m of an office
+            if (!location || !location.latitude || !location.longitude) {
+                return res.status(400).json({ message: 'Location is required to mark attendance. Please enable location services.' });
+            }
+            const geoCheck = isWithinAnyOffice(location.latitude, location.longitude);
+            if (!geoCheck.allowed) {
+                return res.status(403).json({
+                    message: `You are ${geoCheck.distance}m away from the nearest office (${geoCheck.nearestOffice}). Please be within ${geoCheck.radius}m of an office to punch out.`,
+                    distance: geoCheck.distance,
+                    nearestOffice: geoCheck.nearestOffice,
+                    radius: geoCheck.radius,
+                });
+            }
+
             const utcNow = nowUTCMySQL();
             const punch_out_time = utcNow.iso; // Use ISO format for proper timezone awareness
             const imageUrl = req.file ? buildAttendanceImageUrl(req, req.file.filename) : null;
