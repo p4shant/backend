@@ -104,10 +104,6 @@ async function createApprovalOfPaymentCollectionTask(registered_customer_id, ass
     return createTaskForWorkType('approval_of_payment_collection', registered_customer_id, assigned_to_id);
 }
 
-async function createApprovalOfPlantInstallationTask(registered_customer_id, assigned_to_id) {
-    return createTaskForWorkType('approval_of_plant_installation', registered_customer_id, assigned_to_id);
-}
-
 // indent / permissions
 async function createHardCopyindentCreationTask(registered_customer_id, assigned_to_id) {
     const taskService = require('../services/taskService'); // Import inside function
@@ -275,6 +271,5 @@ module.exports = {
     createQualityAssuranceTask,
     createSubmitWarrantyDocumentTask,
     createApprovalOfPaymentCollectionTask,
-    createApprovalOfPlantInstallationTask,
     createAssignQATask
 };
