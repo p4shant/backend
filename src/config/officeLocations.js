@@ -33,6 +33,12 @@ const officeLocations = [
         longitude: 83.516363,
         radiusMeters: 500,
     },
+    {
+        name: 'Ghazipur',
+        latitude: 25.580533,
+        longitude: 83.572535,
+        radiusMeters: 500,
+    },
 ];
 
 module.exports = { officeLocations, DEFAULT_RADIUS_METERS };
