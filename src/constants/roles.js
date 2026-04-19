@@ -11,7 +11,8 @@ const EMPLOYEE_ROLES = [
     'Electrician Assistant',
     'Stock Controller',
     'Inventory Operator',
-    'QA Tester'
+    'QA Tester',
+    'Admin Assistant'
 ];
 
 module.exports = {

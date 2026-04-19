@@ -4,7 +4,11 @@ const { requireRoles, authenticate } = require('../middleware/authMiddleware');
 
 const router = Router();
 
+const { EMPLOYEE_ROLES } = require('../constants/roles');
 const adminRoles = ['System Admin', 'Master Admin', 'SFDC Admin'];
+
+// Public endpoint to get all available roles
+router.get('/roles', (req, res) => res.json({ roles: EMPLOYEE_ROLES }));
 
 router.get('/', employeeController.listEmployees);
 router.put('/change-password', authenticate, employeeController.changePassword);
