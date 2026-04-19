@@ -6,6 +6,11 @@ const router = Router();
 
 router.use(authenticate);
 
+// Admin Assistant attendance endpoints (must be BEFORE /:id route)
+router.get('/admin/employees', controller.getAllEmployeesForAdmin);
+router.get('/admin/status', controller.getAdminAttendanceStatus);
+router.post('/admin/mark', controller.adminMarkAttendance);
+
 // Supervisor team attendance endpoints (must be BEFORE /:id route)
 router.get('/team/members', controller.getTeamMembers);
 router.get('/team/status', controller.getTeamAttendance);

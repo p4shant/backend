@@ -185,6 +185,17 @@ async function punchIn(req, res) {
                 return res.status(409).json({ message: 'Attendance already marked for today' });
             }
 
+            // 10:00 AM IST cutoff: employees cannot self-punch after 10 AM IST
+            // 10:00 AM IST = 04:30 UTC
+            const nowCheck = new Date();
+            const utcMins = nowCheck.getUTCHours() * 60 + nowCheck.getUTCMinutes();
+            const cutoffMins = 4 * 60 + 30; // 04:30 UTC = 10:00 AM IST
+            if (utcMins > cutoffMins) {
+                return res.status(403).json({
+                    message: 'Attendance marking is closed after 10:00 AM IST. Please contact Admin Assistant to mark your attendance.',
+                });
+            }
+
             const location = req.body.location ? JSON.parse(req.body.location) : null;
 
             // Geofence validation: employee must be within 500m of an office
@@ -437,9 +448,138 @@ async function markTeamAttendance(req, res) {
     }
 }
 
+// ============================================================================
+// ADMIN ASSISTANT — Mark attendance for any employee (today only)
+// ============================================================================
+
+const ADMIN_ASSISTANT_ROLES = ['Admin Assistant', 'Master Admin'];
+
+async function getAllEmployeesForAdmin(req, res) {
+    try {
+        if (!ADMIN_ASSISTANT_ROLES.includes(req.user.employee_role)) {
+            return res.status(403).json({ message: 'Only Admin Assistant or Master Admin can access this' });
+        }
+        const db = require('../config/db');
+        const employees = await db.query(
+            `SELECT id, name, employee_role, district FROM employees ORDER BY name`
+        );
+        return res.json({ success: true, data: employees });
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to fetch employees' });
+    }
+}
+
+async function getAdminAttendanceStatus(req, res) {
+    try {
+        if (!ADMIN_ASSISTANT_ROLES.includes(req.user.employee_role)) {
+            return res.status(403).json({ message: 'Only Admin Assistant or Master Admin can access this' });
+        }
+        const today = getTodayStr();
+        const db = require('../config/db');
+        const employees = await db.query(
+            `SELECT id, name, employee_role, district FROM employees ORDER BY name`
+        );
+        const memberIds = employees.map(e => e.id);
+        let records = [];
+        if (memberIds.length > 0) {
+            const placeholders = memberIds.map(() => '?').join(',');
+            records = await db.query(
+                `SELECT ea.*, e.name AS employee_name, e.employee_role, supervisor.name AS marked_by_name
+                 FROM employee_attendance ea
+                 JOIN employees e ON e.id = ea.employee_id
+                 LEFT JOIN employees supervisor ON ea.marked_by = supervisor.id
+                 WHERE ea.attendance_date = ? AND ea.employee_id IN (${placeholders})`,
+                [today, ...memberIds]
+            );
+        }
+        const recordMap = new Map();
+        records.forEach(r => recordMap.set(r.employee_id, r));
+
+        const result = employees.map(emp => {
+            const rec = recordMap.get(emp.id);
+            return {
+                employee_id: emp.id,
+                employee_name: emp.name,
+                employee_role: emp.employee_role,
+                district: emp.district,
+                attendance_id: rec?.id || null,
+                punch_in_time: rec?.punch_in_time || null,
+                punch_out_time: rec?.punch_out_time || null,
+                attendance_mode: rec?.attendance_mode || null,
+                marked_status: rec?.marked_status || null,
+                marked_by: rec?.marked_by || null,
+                marked_by_name: rec?.marked_by_name || null,
+                is_late: rec?.is_late || 0,
+            };
+        });
+        return res.json({ success: true, data: result });
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to fetch attendance status' });
+    }
+}
+
+async function adminMarkAttendance(req, res) {
+    try {
+        if (!ADMIN_ASSISTANT_ROLES.includes(req.user.employee_role)) {
+            return res.status(403).json({ message: 'Only Admin Assistant or Master Admin can mark attendance' });
+        }
+
+        const adminId = req.user.id;
+        const { attendance } = req.body;
+
+        if (!attendance || !Array.isArray(attendance)) {
+            return res.status(400).json({ message: 'attendance array is required' });
+        }
+
+        const today = getTodayStr();
+        const now = new Date();
+        const utcMins = now.getUTCHours() * 60 + now.getUTCMinutes();
+        const isAfterCutoff = utcMins > (4 * 60 + 30); // 04:30 UTC = 10:00 AM IST
+
+        const results = [];
+        for (const entry of attendance) {
+            const { employee_id, status } = entry;
+            const existing = await attendanceService.getByEmployeeAndDate(employee_id, today);
+
+            if (existing) {
+                const updated = await attendanceService.update(existing.id, {
+                    attendance_mode: 'admin',
+                    marked_by: adminId,
+                    marked_status: status,
+                    punch_in_time: status === 'present' ? (existing.punch_in_time || now.toISOString()) : null,
+                    punch_out_time: status === 'present' ? existing.punch_out_time : null,
+                    is_late: status === 'present' && isAfterCutoff ? 1 : 0,
+                    forgot_to_punch_out: 0,
+                });
+                results.push(updated);
+            } else {
+                const created = await attendanceService.create({
+                    employee_id,
+                    attendance_date: today,
+                    attendance_mode: 'admin',
+                    marked_by: adminId,
+                    marked_status: status,
+                    punch_in_time: status === 'present' ? now.toISOString() : null,
+                    punch_out_time: null,
+                    is_late: status === 'present' && isAfterCutoff ? 1 : 0,
+                    forgot_to_punch_out: 0,
+                });
+                results.push(created);
+            }
+        }
+
+        return res.json({ message: `Attendance marked for ${results.length} employees`, results });
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Unable to mark attendance' });
+    }
+}
+
 module.exports.getTodayStatus = getTodayStatus;
 module.exports.punchIn = punchIn;
 module.exports.punchOut = punchOut;
 module.exports.getTeamMembers = getTeamMembers;
 module.exports.getTeamAttendance = getTeamAttendance;
 module.exports.markTeamAttendance = markTeamAttendance;
+module.exports.getAllEmployeesForAdmin = getAllEmployeesForAdmin;
+module.exports.getAdminAttendanceStatus = getAdminAttendanceStatus;
+module.exports.adminMarkAttendance = adminMarkAttendance;

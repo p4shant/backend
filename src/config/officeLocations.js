@@ -39,6 +39,12 @@ const officeLocations = [
         longitude: 83.572535,
         radiusMeters: 500,
     },
+    {
+        name: 'Mau',
+        latitude: 25.925159,
+        longitude: 83.561162,
+        radiusMeters: 500,
+    },
 ];
 
 module.exports = { officeLocations, DEFAULT_RADIUS_METERS };
