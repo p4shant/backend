@@ -18,6 +18,7 @@ const notificationRoutes = require('./notificationRoutes');
 const stockRoutes = require('./stockRoutes');
 const qaTravelRoutes = require('./qaTravelRoutes');
 const pushRoutes = require('./pushRoutes');
+const paymentRoutes = require('./paymentRoutes');
 const { authenticate } = require('../middleware/authMiddleware');
 
 const router = Router();
@@ -42,5 +43,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/stock', stockRoutes);
 router.use('/qa-travel', qaTravelRoutes);
 router.use('/push', pushRoutes);
+router.use('/payments', authenticate, paymentRoutes);
 
 module.exports = router;

@@ -5,8 +5,8 @@
  */
 
 const ROLE_ASSIGNMENTS = {
-    // System Admin - fixed assignment
-    SYSTEM_ADMIN: {
+    // Help Desk - fixed assignment
+    HELP_DESK: {
         users: [
             {
                 name: 'Mohammad Bilal Ansari',

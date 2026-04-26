@@ -7,11 +7,8 @@ const NEXT_TASK_MAPPING = {
     },
 
     'collect_remaining_amount': {
-        nextWorkTypes: [{
-            worktype: 'approval_of_payment_collection',
-            requiredRole: 'Master Admin',
-            functionName: 'createApprovalOfPaymentCollectionTask'
-        }]
+        nextWorkTypes: [],
+        notes: 'Removed from task flow - handled via Payment Collection page'
     },
 
     'approval_of_payment_collection': {
@@ -19,14 +16,15 @@ const NEXT_TASK_MAPPING = {
             worktype: 'generate_bill',
             requiredRole: 'Accountant',
             functionName: 'createGenerateBillTask'
-        }]
+        }],
+        notes: 'Triggered from Payment Approval page, not from task chain'
     },
 
     'complete_registration': {
         nextWorkTypes: [
             {
                 worktype: 'hard_copy_indent_creation',
-                requiredRole: 'System Admin',
+                requiredRole: 'Help Desk',
                 functionName: 'createHardCopyindentCreationTask'
             },
             {
@@ -41,7 +39,7 @@ const NEXT_TASK_MAPPING = {
     'cot_request': {
         nextWorkTypes: [{
             worktype: 'hard_copy_indent_creation',
-            requiredRole: 'System Admin',
+            requiredRole: 'Help Desk',
             functionName: 'createHardCopyindentCreationTask'
         }]
     },
@@ -49,7 +47,7 @@ const NEXT_TASK_MAPPING = {
     'load_request': {
         nextWorkTypes: [{
             worktype: 'hard_copy_indent_creation',
-            requiredRole: 'System Admin',
+            requiredRole: 'Help Desk',
             functionName: 'createHardCopyindentCreationTask'
         }]
     },
@@ -57,7 +55,7 @@ const NEXT_TASK_MAPPING = {
     'name_correction_request': {
         nextWorkTypes: [{
             worktype: 'hard_copy_indent_creation',
-            requiredRole: 'System Admin',
+            requiredRole: 'Help Desk',
             functionName: 'createHardCopyindentCreationTask'
         }]
     },
@@ -71,11 +69,8 @@ const NEXT_TASK_MAPPING = {
         }]
     },
     'submit_finance_to_bank': {
-        nextWorkTypes: [{
-            worktype: 'approval_of_payment_collection',
-            requiredRole: 'Master Admin',
-            functionName: 'createApprovalOfPaymentCollectionTask'
-        }]
+        nextWorkTypes: [],
+        notes: 'Terminal - finance customer appears on Payment Approval page after this'
     },
 
     // Intent/Permission phase
@@ -107,7 +102,7 @@ const NEXT_TASK_MAPPING = {
     'plant_installation': {
         nextWorkTypes: [{
             worktype: 'take_installed_item_photos',
-            requiredRole: 'Technician',
+            requiredRole: 'Help Desk',
             functionName: 'createTakeInstalledItemPhotosTask'
         }]
     },
@@ -116,7 +111,7 @@ const NEXT_TASK_MAPPING = {
     'take_installed_item_photos': {
         nextWorkTypes: [{
             worktype: 'upload_installed_item_serial_number',
-            requiredRole: 'System Admin',
+            requiredRole: 'Help Desk',
             functionName: 'createUploadInstalledItemSerialNumberTask'
         }]
     },
@@ -140,7 +135,7 @@ const NEXT_TASK_MAPPING = {
     'inspection': {
         nextWorkTypes: [{
             worktype: 'apply_subsidy',
-            requiredRole: 'System Admin',
+            requiredRole: 'Help Desk',
             functionName: 'createApplySubsidyTask'
         }]
     },
@@ -148,7 +143,7 @@ const NEXT_TASK_MAPPING = {
     'apply_subsidy': {
         nextWorkTypes: [{
             worktype: 'subsidy_redemption',
-            requiredRole: 'System Admin',
+            requiredRole: 'Help Desk',
             functionName: 'createSubsidyRedemptionTask'
         }]
     },
@@ -193,19 +188,19 @@ const NEXT_TASK_MAPPING = {
     // Billing phase
     'generate_bill': {
         nextWorkTypes: [{
-            worktype: 'create_cdr',
-            requiredRole: 'Master Admin',
-            functionName: 'createCdrTask'
+            worktype: 'create_dcr',
+            requiredRole: 'Accountant',
+            functionName: 'createDcrTask'
         }]
     },
 
-    'create_cdr': {
+    'create_dcr': {
         nextWorkTypes: [{
             worktype: 'apply_subsidy',
-            requiredRole: 'System Admin',
+            requiredRole: 'Help Desk',
             functionName: 'createApplySubsidyTask'
         }],
-        notes: 'Terminal task - CDR created'
+        notes: 'DCR created - triggers apply_subsidy'
     }
 };
 

@@ -92,22 +92,22 @@ async function create(req, res) {
         try {
             const db = require('../config/db');
 
-            // Find System Admins from flexible role assignment config
-            const configuredSystemAdmins = Array.isArray(ROLE_ASSIGNMENTS.SYSTEM_ADMIN?.users)
-                ? ROLE_ASSIGNMENTS.SYSTEM_ADMIN.users
-                : [ROLE_ASSIGNMENTS.SYSTEM_ADMIN].filter(Boolean);
+            // Find Help Desk employees from flexible role assignment config
+            const configuredHelpDesk = Array.isArray(ROLE_ASSIGNMENTS.HELP_DESK?.users)
+                ? ROLE_ASSIGNMENTS.HELP_DESK.users
+                : [ROLE_ASSIGNMENTS.HELP_DESK].filter(Boolean);
 
-            const resolvedSystemAdminIds = [];
-            for (const adminConfig of configuredSystemAdmins) {
+            const resolvedHelpDeskIds = [];
+            for (const adminConfig of configuredHelpDesk) {
                 if (!adminConfig?.phone) continue;
                 const admin = await employeeService.findByPhone(adminConfig.phone);
                 if (admin?.id) {
-                    resolvedSystemAdminIds.push(admin.id);
+                    resolvedHelpDeskIds.push(admin.id);
                 }
             }
 
-            const systemAdminIds = resolvedSystemAdminIds.length > 0
-                ? [...new Set(resolvedSystemAdminIds)]
+            const helpDeskIds = resolvedHelpDeskIds.length > 0
+                ? [...new Set(resolvedHelpDeskIds)]
                 : [loggedInUserId];
 
             // Find Master Admin
@@ -134,11 +134,10 @@ async function create(req, res) {
             );
 
             // Always create these basic tasks
-            // For Sale Executive tasks, use the employee who registered the customer (created_by)
             await createCustomerDataGatheringTask(customerId, salesExecutiveId); // Sale Executive who registered
-            await createCollectRemainingAmountTask(customerId, salesExecutiveId); // Sale Executive who registered
-            await createCompleteRegistrationTask(customerId, systemAdminIds); // System Admin(s)
-            await createApprovalOfPaymentCollectionTask(customerId, masterAdminId); // Master Admin
+            await createCompleteRegistrationTask(customerId, helpDeskIds); // Help Desk (multi-assignee)
+            // Note: collect_remaining_amount and approval_of_payment_collection removed
+            // Payment collection/approval is now handled via dedicated pages
 
             // Conditionally create tasks based on requirements
             if (data.cot_required === 'Yes') {
@@ -155,7 +154,7 @@ async function create(req, res) {
 
             // Finance task if required
             if (data.payment_mode === 'Finance' || data.special_finance_required === 'Yes') {
-                await createFinanceRegistrationTask(customerId, systemAdminIds); // System Admin(s)
+                await createFinanceRegistrationTask(customerId, helpDeskIds); // Help Desk (multi-assignee)
             }
         } catch (taskErr) {
             console.error('Error creating tasks:', taskErr.message);

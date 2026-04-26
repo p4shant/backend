@@ -12,7 +12,7 @@ const { ROLE_ASSIGNMENTS } = require('../config/roleAssignments');
 /**
  * Get the employee ID to assign a task based on role and business rules
  * 
- * @param {string} requiredRole - The role needed (e.g., 'Electrician', 'System Admin')
+ * @param {string} requiredRole - The role needed (e.g., 'Electrician', 'Help Desk')
  * @param {object} customerData - Registered customer data for district-based logic
  * @param {object} loggedInUser - Current logged-in user (for Sales Executive assignment)
  * @returns {Promise<number[]>} Employee IDs to assign task to
@@ -21,21 +21,21 @@ async function getEmployeeIdsByRoleAndRules(requiredRole, customerData, loggedIn
     const logger = require('./logger'); // Import inside function
     try {
         switch (requiredRole) {
-            case 'System Admin':
-                // Flexible assignment: resolve configured System Admin users by phone
+            case 'Help Desk':
+                // Flexible assignment: resolve configured Help Desk users by phone
                 {
-                    const configuredUsers = Array.isArray(ROLE_ASSIGNMENTS.SYSTEM_ADMIN?.users)
-                        ? ROLE_ASSIGNMENTS.SYSTEM_ADMIN.users
-                        : [ROLE_ASSIGNMENTS.SYSTEM_ADMIN].filter(Boolean);
+                    const configuredUsers = Array.isArray(ROLE_ASSIGNMENTS.HELP_DESK?.users)
+                        ? ROLE_ASSIGNMENTS.HELP_DESK.users
+                        : [ROLE_ASSIGNMENTS.HELP_DESK].filter(Boolean);
 
                     const resolvedAdmins = [];
                     for (const user of configuredUsers) {
                         if (!user?.phone) continue;
-                        const systemAdmin = await employeeService.findByPhone(user.phone);
-                        if (systemAdmin) {
-                            resolvedAdmins.push(systemAdmin.id);
+                        const helpDeskUser = await employeeService.findByPhone(user.phone);
+                        if (helpDeskUser) {
+                            resolvedAdmins.push(helpDeskUser.id);
                         } else {
-                            logger.warn(`System Admin not found by phone ${user.phone}`);
+                            logger.warn(`Help Desk user not found by phone ${user.phone}`);
                         }
                     }
 
@@ -44,9 +44,9 @@ async function getEmployeeIdsByRoleAndRules(requiredRole, customerData, loggedIn
                     }
                 }
 
-                // Fallback: get all system admins
-                const sysAdmins = await employeeService.findByRole('System Admin');
-                return sysAdmins.map(admin => admin.id);
+                // Fallback: get all Help Desk employees
+                const helpDeskUsers = await employeeService.findByRole('Help Desk');
+                return helpDeskUsers.map(admin => admin.id);
 
             case 'Electrician':
                 // Find electrician from same district as customer
