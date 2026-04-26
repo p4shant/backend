@@ -1,6 +1,6 @@
 const EMPLOYEE_ROLES = [
     'Sale Executive',
-    'System Admin',
+    'Help Desk',
     'Electrician',
     'Accountant',
     'Master Admin',

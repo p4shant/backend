@@ -90,6 +90,8 @@ function structureTaskWithCustomerData(row) {
         assigned_to_name: row.assigned_to_name,
         assigned_to_role: row.assigned_to_role,
         registered_customer_id: row.registered_customer_id,
+        completed_by: row.completed_by,
+        completed_by_name: row.completed_by_name || null,
         created_at: row.created_at,
         updated_at: row.updated_at,
         registered_customer_data: {
@@ -349,10 +351,12 @@ async function list(filters = {}) {
       tl.amount_submitted_details as transaction_amount_submitted_details,
       tl.amount_submitted_images_url as transaction_amount_submitted_images_url,
       tl.created_at as transaction_created_at,
-      tl.updated_at as transaction_updated_at
+      tl.updated_at as transaction_updated_at,
+      ecb.name as completed_by_name
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN employees ecb ON t.completed_by = ecb.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     ${whereClause}
@@ -457,10 +461,12 @@ async function getById(id) {
       tl.amount_submitted_details as transaction_amount_submitted_details,
       tl.amount_submitted_images_url as transaction_amount_submitted_images_url,
       tl.created_at as transaction_created_at,
-      tl.updated_at as transaction_updated_at
+      tl.updated_at as transaction_updated_at,
+      ecb.name as completed_by_name
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN employees ecb ON t.completed_by = ecb.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.id = ?
@@ -658,6 +664,12 @@ async function update(id, data) {
             if (!docValidation.valid) {
                 throw docValidation.error;
             }
+
+            // Set completed_by if provided (from controller via req.user.id)
+            if (updateData.completed_by_id) {
+                updateData.completed_by = updateData.completed_by_id;
+                delete updateData.completed_by_id;
+            }
         }
     }
 
@@ -835,10 +847,12 @@ async function getByStatus(status) {
       tl.amount_submitted_details as transaction_amount_submitted_details,
       tl.amount_submitted_images_url as transaction_amount_submitted_images_url,
       tl.created_at as transaction_created_at,
-      tl.updated_at as transaction_updated_at
+      tl.updated_at as transaction_updated_at,
+      ecb.name as completed_by_name
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN employees ecb ON t.completed_by = ecb.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.status = ?
@@ -931,10 +945,12 @@ async function getByEmployee(employeeId) {
       tl.amount_submitted_details as transaction_amount_submitted_details,
       tl.amount_submitted_images_url as transaction_amount_submitted_images_url,
       tl.created_at as transaction_created_at,
-      tl.updated_at as transaction_updated_at
+      tl.updated_at as transaction_updated_at,
+      ecb.name as completed_by_name
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN employees ecb ON t.completed_by = ecb.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
         WHERE (t.assigned_to_id = ? OR JSON_CONTAINS(COALESCE(t.assigned_to_ids, JSON_ARRAY(t.assigned_to_id)), ?))
@@ -1028,10 +1044,12 @@ async function getByCustomer(customerId) {
       tl.amount_submitted_details as transaction_amount_submitted_details,
       tl.amount_submitted_images_url as transaction_amount_submitted_images_url,
       tl.created_at as transaction_created_at,
-      tl.updated_at as transaction_updated_at
+      tl.updated_at as transaction_updated_at,
+      ecb.name as completed_by_name
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN employees ecb ON t.completed_by = ecb.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.registered_customer_id = ?
@@ -1136,10 +1154,12 @@ async function getReassignmentApprovals() {
       tl.amount_submitted_details as transaction_amount_submitted_details,
       tl.amount_submitted_images_url as transaction_amount_submitted_images_url,
       tl.created_at as transaction_created_at,
-      tl.updated_at as transaction_updated_at
+      tl.updated_at as transaction_updated_at,
+      ecb.name as completed_by_name
     FROM tasks t
     LEFT JOIN registered_customers rc ON t.registered_customer_id = rc.id
     LEFT JOIN employees e ON rc.created_by = e.id
+    LEFT JOIN employees ecb ON t.completed_by = ecb.id
         LEFT JOIN additional_documents ad ON rc.id = ad.registered_customer_id
     LEFT JOIN transaction_logs tl ON rc.id = tl.registered_customer_id
     WHERE t.work_type LIKE 'reassign_task_approval%'

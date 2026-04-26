@@ -158,8 +158,8 @@ async function createGenerateBillTask(registered_customer_id, assigned_to_id) {
     return createTaskForWorkType('generate_bill', registered_customer_id, assigned_to_id);
 }
 
-async function createCdrTask(registered_customer_id, assigned_to_id) {
-    return createTaskForWorkType('create_cdr', registered_customer_id, assigned_to_id);
+async function createDcrTask(registered_customer_id, assigned_to_id) {
+    return createTaskForWorkType('create_dcr', registered_customer_id, assigned_to_id);
 }
 
 async function createTakeInstalledItemPhotosTask(registered_customer_id, assigned_to_id) {
@@ -212,14 +212,14 @@ async function createApplySubsidyTask(registered_customer_id, assigned_to_id) {
     }
 
     // Check if both required tasks exist and are completed
-    const createCdrTask = customerTasks.find(t => t.work_type === 'create_cdr');
+    const createDcrTask = customerTasks.find(t => t.work_type === 'create_dcr');
     const inspectionTask = customerTasks.find(t => t.work_type === 'inspection');
 
     // Both tasks must exist and be completed
-    const cdrCompleted = createCdrTask && createCdrTask.status === 'completed';
+    const dcrCompleted = createDcrTask && createDcrTask.status === 'completed';
     const inspectionCompleted = inspectionTask && inspectionTask.status === 'completed';
 
-    if (!cdrCompleted || !inspectionCompleted) {
+    if (!dcrCompleted || !inspectionCompleted) {
         return null; // Both tasks must be completed
     }
 
@@ -261,7 +261,7 @@ module.exports = {
     createMeterInstallationTask,
     createPlantInstallationTask,
     createGenerateBillTask,
-    createCdrTask,
+    createDcrTask,
     createTakeInstalledItemPhotosTask,
     createUploadInstalledItemSerialNumberTask,
     createInspectionTask,

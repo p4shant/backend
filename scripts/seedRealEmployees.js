@@ -13,7 +13,7 @@ async function seed() {
 
     // Note: Some roles mapped to closest valid role:
     // Sales Manager/Asst Sales Manager -> Operation Manager
-    // QA -> System Admin
+    // QA -> Help Desk
     // Sales Executives -> Sale Executive
     const realEmployees = [
         { name: 'Sangeeta Singh', phone_number: '9628677090', district: 'All', employee_role: 'Master Admin' },
@@ -24,7 +24,7 @@ async function seed() {
         { name: 'Ankita Chaudhary', phone_number: '7392913092', district: 'Ghazipur', employee_role: 'SFDC Admin' },
         { name: 'Dhananjay Singh', phone_number: '9792265673', district: 'Ghazipur', employee_role: 'Electrician' },
         { name: 'Sayyad Raji Haider', phone_number: '6388402855', district: 'Ghazipur', employee_role: 'Sale Executive' },
-        { name: 'Mohammad Bilal Ansari', phone_number: '7275094145', district: 'Ghazipur', employee_role: 'System Admin' },
+        { name: 'Mohammad Bilal Ansari', phone_number: '7275094145', district: 'Ghazipur', employee_role: 'Help Desk' },
         { name: 'Vipin Sharma', phone_number: '7999388372', district: 'Varanasi', employee_role: 'Sale Executive' },
         { name: 'Ranjit Singh', phone_number: '9670009602', district: 'Mau', employee_role: 'Operation Manager' },
         { name: 'Vikas Singh', phone_number: '7380580198', district: 'Mau', employee_role: 'Electrician' },
@@ -49,11 +49,11 @@ async function seed() {
         { name: 'Indramani Kushwaha', phone_number: '7985880732', district: 'Varanasi', employee_role: 'Accountant' },
         { name: 'Sachin Kumar', phone_number: '9451129655', district: 'Varanasi', employee_role: 'Operation Manager' },
         { name: 'Satish Mishra', phone_number: '9170442372', district: 'Ghazipur', employee_role: 'Operation Manager' },
-        { name: 'Ashish Kumar Sharma', phone_number: '7275512458', district: 'Varanasi', employee_role: 'System Admin' },
+        { name: 'Ashish Kumar Sharma', phone_number: '7275512458', district: 'Varanasi', employee_role: 'Help Desk' },
         { name: 'Nandan Singh', phone_number: '7398421944', district: 'Ghazipur', employee_role: 'Sale Executive' },
-        { name: 'Jyoti', phone_number: '7029269883', district: 'Ghazipur', employee_role: 'System Admin' },
+        { name: 'Jyoti', phone_number: '7029269883', district: 'Ghazipur', employee_role: 'Help Desk' },
         { name: 'Anand', phone_number: '8542870159', district: 'Azamgarh', employee_role: 'Sale Executive' },
-        { name: 'Anand Pandey', phone_number: '7007543240', district: 'Ghazipur', employee_role: 'System Admin' }
+        { name: 'Anand Pandey', phone_number: '7007543240', district: 'Ghazipur', employee_role: 'Help Desk' }
     ];
 
     for (const emp of realEmployees) {

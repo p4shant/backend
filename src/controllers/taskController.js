@@ -44,7 +44,12 @@ async function create(req, res) {
 
 async function update(req, res) {
     try {
-        const task = await taskService.update(Number(req.params.id), req.body);
+        const updateData = { ...req.body };
+        // Pass the completing user's ID for completed_by tracking
+        if (updateData.status === 'completed' && req.user) {
+            updateData.completed_by_id = req.user.id;
+        }
+        const task = await taskService.update(Number(req.params.id), updateData);
 
         // If task was just completed, create next tasks in workflow
         if (req.body.status === 'completed' && task.status === 'completed') {
@@ -79,7 +84,12 @@ async function update(req, res) {
 
 async function partialUpdate(req, res) {
     try {
-        const task = await taskService.partialUpdate(Number(req.params.id), req.body);
+        const updateData = { ...req.body };
+        // Pass the completing user's ID for completed_by tracking
+        if (updateData.status === 'completed' && req.user) {
+            updateData.completed_by_id = req.user.id;
+        }
+        const task = await taskService.partialUpdate(Number(req.params.id), updateData);
 
         // If task was just completed, create next tasks in workflow
         if (req.body.status === 'completed' && task.status === 'completed') {
