@@ -80,14 +80,18 @@ async function getById(req, res) {
 
 async function create(req, res) {
     try {
-        const data = { ...req.body, created_by: req.user.id };
+        // If Help Desk creates on behalf of another employee, use that employee's ID as created_by
+        const createdBy = (req.user.employee_role === 'Help Desk' && req.body.created_by && Number(req.body.created_by) !== req.user.id)
+            ? Number(req.body.created_by)
+            : req.user.id;
+        const data = { ...req.body, created_by: createdBy };
         const customer = await registeredCustomerService.create(data);
 
         // Create tasks automatically after customer creation
         const loggedInUserId = req.user.id;
         const customerId = customer.id;
         const customerDistrict = customer.district;
-        const salesExecutiveId = customer.created_by; // Employee who registered the customer
+        const salesExecutiveId = customer.created_by; // Employee on whose behalf customer was created
 
         try {
             const db = require('../config/db');
