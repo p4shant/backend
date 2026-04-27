@@ -22,31 +22,15 @@ async function getEmployeeIdsByRoleAndRules(requiredRole, customerData, loggedIn
     try {
         switch (requiredRole) {
             case 'Help Desk':
-                // Flexible assignment: resolve configured Help Desk users by phone
+                // Get ALL Help Desk employees from DB
                 {
-                    const configuredUsers = Array.isArray(ROLE_ASSIGNMENTS.HELP_DESK?.users)
-                        ? ROLE_ASSIGNMENTS.HELP_DESK.users
-                        : [ROLE_ASSIGNMENTS.HELP_DESK].filter(Boolean);
-
-                    const resolvedAdmins = [];
-                    for (const user of configuredUsers) {
-                        if (!user?.phone) continue;
-                        const helpDeskUser = await employeeService.findByPhone(user.phone);
-                        if (helpDeskUser) {
-                            resolvedAdmins.push(helpDeskUser.id);
-                        } else {
-                            logger.warn(`Help Desk user not found by phone ${user.phone}`);
-                        }
+                    const helpDeskUsers = await employeeService.findByRole('Help Desk');
+                    if (helpDeskUsers.length > 0) {
+                        return helpDeskUsers.map(u => u.id);
                     }
-
-                    if (resolvedAdmins.length > 0) {
-                        return [...new Set(resolvedAdmins)];
-                    }
+                    logger.warn('No Help Desk employees found in DB');
+                    return [];
                 }
-
-                // Fallback: get all Help Desk employees
-                const helpDeskUsers = await employeeService.findByRole('Help Desk');
-                return helpDeskUsers.map(admin => admin.id);
 
             case 'Electrician':
                 // Find electrician from same district as customer

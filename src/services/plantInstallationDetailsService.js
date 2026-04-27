@@ -44,14 +44,25 @@ async function create(data) {
     const sql = `INSERT INTO plant_installations (${fields.join(', ')}) VALUES (${placeholders})`;
     const result = await db.query(sql, values);
 
-    // Create photo task for the photo taker
-    if (data.photo_taker_employee_id && data.registered_customer_id) {
+    // Create photo task for all Help Desk employees (not individual technician)
+    if (data.registered_customer_id) {
         try {
             const Tasks = require('../utils/Tasks');
-            await Tasks.createTakeInstalledItemPhotosTask(
-                data.registered_customer_id,
-                data.photo_taker_employee_id
-            );
+            const employeeService = require('../services/employeeService');
+            const helpDeskEmployees = await employeeService.findByRole('Help Desk');
+            if (helpDeskEmployees.length > 0) {
+                const helpDeskIds = helpDeskEmployees.map(e => e.id);
+                await Tasks.createTakeInstalledItemPhotosTask(
+                    data.registered_customer_id,
+                    helpDeskIds
+                );
+            } else if (data.photo_taker_employee_id) {
+                // Fallback to photo taker if no Help Desk found
+                await Tasks.createTakeInstalledItemPhotosTask(
+                    data.registered_customer_id,
+                    data.photo_taker_employee_id
+                );
+            }
         } catch (err) {
             console.error('Error creating photo task:', err);
             // Don't fail the whole operation if task creation fails

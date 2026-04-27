@@ -96,22 +96,10 @@ async function create(req, res) {
         try {
             const db = require('../config/db');
 
-            // Find Help Desk employees from flexible role assignment config
-            const configuredHelpDesk = Array.isArray(ROLE_ASSIGNMENTS.HELP_DESK?.users)
-                ? ROLE_ASSIGNMENTS.HELP_DESK.users
-                : [ROLE_ASSIGNMENTS.HELP_DESK].filter(Boolean);
-
-            const resolvedHelpDeskIds = [];
-            for (const adminConfig of configuredHelpDesk) {
-                if (!adminConfig?.phone) continue;
-                const admin = await employeeService.findByPhone(adminConfig.phone);
-                if (admin?.id) {
-                    resolvedHelpDeskIds.push(admin.id);
-                }
-            }
-
-            const helpDeskIds = resolvedHelpDeskIds.length > 0
-                ? [...new Set(resolvedHelpDeskIds)]
+            // Find ALL Help Desk employees from DB
+            const helpDeskEmployees = await employeeService.findByRole('Help Desk');
+            const helpDeskIds = helpDeskEmployees.length > 0
+                ? helpDeskEmployees.map(e => e.id)
                 : [loggedInUserId];
 
             // Find Master Admin
