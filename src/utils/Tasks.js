@@ -105,14 +105,14 @@ async function createApprovalOfPaymentCollectionTask(registered_customer_id, ass
 }
 
 // indent / permissions
-async function createHardCopyindentCreationTask(registered_customer_id, assigned_to_id) {
+async function createSubmitindentToElectricalDeptTask(registered_customer_id, assigned_to_id) {
     const taskService = require('../services/taskService'); // Import inside function
 
     // Get all tasks for this customer
     const customerTasks = await taskService.getByCustomer(Number(registered_customer_id));
 
-    // Check if hard_copy_indent_creation task already exists
-    const existingIndentTask = customerTasks.find(t => t.work_type === 'hard_copy_indent_creation');
+    // Check if submit_indent_to_electrical_department task already exists
+    const existingIndentTask = customerTasks.find(t => t.work_type === 'submit_indent_to_electrical_department');
     if (existingIndentTask) {
         return null; // Task already exists, don't create duplicate
     }
@@ -137,10 +137,6 @@ async function createHardCopyindentCreationTask(registered_customer_id, assigned
     }
 
     // All conditions met - create the task
-    return createTaskForWorkType('hard_copy_indent_creation', registered_customer_id, assigned_to_id);
-}
-
-async function createSubmitindentToElectricalDeptTask(registered_customer_id, assigned_to_id) {
     return createTaskForWorkType('submit_indent_to_electrical_department', registered_customer_id, assigned_to_id);
 }
 
@@ -256,7 +252,6 @@ module.exports = {
     createNameCorrectionRequestTask,
     createFinanceRegistrationTask,
     createSubmitFinanceToBankTask,
-    createHardCopyindentCreationTask,
     createSubmitindentToElectricalDeptTask,
     createMeterInstallationTask,
     createPlantInstallationTask,
