@@ -23,9 +23,9 @@ const NEXT_TASK_MAPPING = {
     'complete_registration': {
         nextWorkTypes: [
             {
-                worktype: 'hard_copy_indent_creation',
-                requiredRole: 'Help Desk',
-                functionName: 'createHardCopyindentCreationTask'
+                worktype: 'submit_indent_to_electrical_department',
+                requiredRole: 'Electrician',
+                functionName: 'createSubmitindentToElectricalDeptTask'
             },
             {
                 worktype: 'plant_installation',
@@ -38,25 +38,25 @@ const NEXT_TASK_MAPPING = {
     // Utility/COT/Load/Name correction phase
     'cot_request': {
         nextWorkTypes: [{
-            worktype: 'hard_copy_indent_creation',
-            requiredRole: 'Help Desk',
-            functionName: 'createHardCopyindentCreationTask'
+            worktype: 'submit_indent_to_electrical_department',
+            requiredRole: 'Electrician',
+            functionName: 'createSubmitindentToElectricalDeptTask'
         }]
     },
 
     'load_request': {
         nextWorkTypes: [{
-            worktype: 'hard_copy_indent_creation',
-            requiredRole: 'Help Desk',
-            functionName: 'createHardCopyindentCreationTask'
+            worktype: 'submit_indent_to_electrical_department',
+            requiredRole: 'Electrician',
+            functionName: 'createSubmitindentToElectricalDeptTask'
         }]
     },
 
     'name_correction_request': {
         nextWorkTypes: [{
-            worktype: 'hard_copy_indent_creation',
-            requiredRole: 'Help Desk',
-            functionName: 'createHardCopyindentCreationTask'
+            worktype: 'submit_indent_to_electrical_department',
+            requiredRole: 'Electrician',
+            functionName: 'createSubmitindentToElectricalDeptTask'
         }]
     },
 
@@ -74,14 +74,6 @@ const NEXT_TASK_MAPPING = {
     },
 
     // Intent/Permission phase
-    'hard_copy_indent_creation': {
-        nextWorkTypes: [{
-            worktype: 'submit_indent_to_electrical_department',
-            requiredRole: 'Electrician',
-            functionName: 'createSubmitindentToElectricalDeptTask'
-        }]
-    },
-
     'submit_indent_to_electrical_department': {
         nextWorkTypes: [{
             worktype: 'meter_installation',
