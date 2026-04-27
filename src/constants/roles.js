@@ -12,7 +12,9 @@ const EMPLOYEE_ROLES = [
     'Stock Controller',
     'Inventory Operator',
     'QA Tester',
-    'Admin Assistant'
+    'Admin Assistant',
+    'Service Coordinator',
+    'Calling Executive'
 ];
 
 module.exports = {
