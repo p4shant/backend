@@ -64,10 +64,32 @@ async function getRecentActivity(req, res) {
     catch (err) { return res.status(500).json({ message: err.message || 'Unable to fetch data' }); }
 }
 
+async function getPlantInstallationsDone(req, res) {
+    try {
+        const { month, year, district } = req.query;
+        return res.json(await statsService.getPlantInstallationsDone({ month, year, district }));
+    } catch (err) { return res.status(500).json({ message: err.message || 'Unable to fetch data' }); }
+}
+
+async function getRegistrationsByDistrict(req, res) {
+    try {
+        const { month, year } = req.query;
+        return res.json(await statsService.getRegistrationsByDistrict({ month, year }));
+    } catch (err) { return res.status(500).json({ message: err.message || 'Unable to fetch data' }); }
+}
+
+async function getIndentSubmissions(req, res) {
+    try {
+        const { month, year, district, status } = req.query;
+        return res.json(await statsService.getIndentSubmissions({ month, year, district, status }));
+    } catch (err) { return res.status(500).json({ message: err.message || 'Unable to fetch data' }); }
+}
+
 module.exports = {
     getOverview, getInstallationsByDistrict, getEmployeesByDistrict,
     getFinanceCases, getSalesExecutiveStats, getMonthlyTrend,
     getTaskPipeline, getAttendanceSummary,
     getPlantSizeDistribution, getPaymentCollectionTrend,
     getSpecialRequirements, getRecentActivity,
+    getPlantInstallationsDone, getRegistrationsByDistrict, getIndentSubmissions,
 };

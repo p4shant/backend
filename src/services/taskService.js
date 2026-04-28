@@ -721,19 +721,22 @@ async function update(id, data) {
     if (wasCompleting) {
         const logger = require('../utils/logger');
         try {
-            const identifyNextTaskCall = require('../utils/IdentifyNextTaskCall');
+            const TaskCompletionHandler = require('../utils/TaskCompletionHandler');
 
-            // Get next task details asynchronously (non-blocking)
-            identifyNextTaskCall.getNextTaskDetails(existing.work_type, {
-                customerId: existing.registered_customer_id,
-                customer: existing.registered_customer_data
-            }).then(nextTaskInfo => {
-                if (nextTaskInfo.success && nextTaskInfo.nextWorkType) {
-                    logger.info(`Next task identified: ${nextTaskInfo.nextWorkType} for customer ${existing.registered_customer_id}`);
-                    // Could emit event here or queue for background processing
+            // Actually create next tasks (non-blocking)
+            TaskCompletionHandler.handleTaskCompletion(
+                id,
+                existing.work_type,
+                existing.registered_customer_id,
+                { customerId: existing.registered_customer_id, customer: existing.registered_customer_data }
+            ).then(result => {
+                if (result.success) {
+                    logger.info(`Task completion handled for ${existing.work_type}, customer ${existing.registered_customer_id}`);
+                } else {
+                    logger.error(`Task completion handler failed: ${result.error}`);
                 }
             }).catch(err => {
-                logger.error(`Error identifying next task for ${existing.work_type}: ${err.message}`);
+                logger.error(`Error in task completion handler: ${err.message}`);
             });
         } catch (err) {
             logger.error(`Workflow trigger failed: ${err.message}`);
