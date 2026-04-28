@@ -18,5 +18,8 @@ router.get('/plant-size-distribution', controller.getPlantSizeDistribution);
 router.get('/payment-collection-trend', controller.getPaymentCollectionTrend);
 router.get('/special-requirements', controller.getSpecialRequirements);
 router.get('/recent-activity', controller.getRecentActivity);
+router.get('/plant-installations-done', controller.getPlantInstallationsDone);
+router.get('/registrations-by-district', controller.getRegistrationsByDistrict);
+router.get('/indent-submissions', controller.getIndentSubmissions);
 
 module.exports = router;

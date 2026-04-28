@@ -364,6 +364,140 @@ async function getRecentActivity() {
     };
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// 13. PLANT INSTALLATIONS DONE — with month/year/district filters
+// ═══════════════════════════════════════════════════════════════════════
+async function getPlantInstallationsDone(filters = {}) {
+    const { month, year, district } = filters;
+    const conditions = ["t.work_type = 'plant_installation'", "t.status = 'completed'"];
+    const params = [];
+
+    if (year) { conditions.push('YEAR(t.updated_at) = ?'); params.push(Number(year)); }
+    if (month) { conditions.push('MONTH(t.updated_at) = ?'); params.push(Number(month)); }
+    if (district && district !== 'all') { conditions.push('rc.district = ?'); params.push(district); }
+
+    const rows = await db.query(`
+        SELECT 
+            rc.id as customer_id,
+            rc.applicant_name,
+            rc.mobile_number,
+            rc.district,
+            rc.plant_size_kw,
+            rc.solar_system_type,
+            rc.plant_price,
+            t.assigned_to_name,
+            t.updated_at as completed_date,
+            e.name as created_by_name
+        FROM tasks t
+        JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        LEFT JOIN employees e ON rc.created_by = e.id
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY t.updated_at DESC
+    `, params);
+
+    const summary = await db.query(`
+        SELECT 
+            rc.district,
+            COUNT(*) as count,
+            COALESCE(SUM(rc.plant_size_kw), 0) as total_kw,
+            COALESCE(SUM(rc.plant_price), 0) as total_value
+        FROM tasks t
+        JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        WHERE ${conditions.join(' AND ')}
+        GROUP BY rc.district
+        ORDER BY count DESC
+    `, params);
+
+    return { installations: rows, summary, total: rows.length };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 14. REGISTRATIONS BY DISTRICT — with month/year filter
+// ═══════════════════════════════════════════════════════════════════════
+async function getRegistrationsByDistrict(filters = {}) {
+    const { month, year } = filters;
+    const conditions = [];
+    const params = [];
+
+    if (year) { conditions.push('YEAR(rc.created_at) = ?'); params.push(Number(year)); }
+    if (month) { conditions.push('MONTH(rc.created_at) = ?'); params.push(Number(month)); }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const rows = await db.query(`
+        SELECT 
+            rc.district,
+            COUNT(*) as total,
+            SUM(CASE WHEN rc.application_status = 'COMPLETED' THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN rc.application_status = 'DRAFT' THEN 1 ELSE 0 END) as draft,
+            SUM(CASE WHEN rc.payment_mode = 'Finance' THEN 1 ELSE 0 END) as finance_cases,
+            SUM(CASE WHEN rc.payment_mode = 'Cash' THEN 1 ELSE 0 END) as cash_cases,
+            COALESCE(SUM(rc.plant_size_kw), 0) as total_kw,
+            COALESCE(SUM(rc.plant_price), 0) as total_value
+        FROM registered_customers rc
+        ${whereClause}
+        GROUP BY rc.district
+        ORDER BY total DESC
+    `, params);
+
+    const grandTotal = rows.reduce((acc, r) => ({
+        total: acc.total + r.total,
+        completed: acc.completed + r.completed,
+        total_kw: acc.total_kw + Number(r.total_kw),
+        total_value: acc.total_value + Number(r.total_value),
+    }), { total: 0, completed: 0, total_kw: 0, total_value: 0 });
+
+    return { districts: rows, grandTotal };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 15. INDENT SUBMISSIONS — by district with month/year filter
+// ═══════════════════════════════════════════════════════════════════════
+async function getIndentSubmissions(filters = {}) {
+    const { month, year, district, status } = filters;
+    const conditions = ["t.work_type = 'submit_indent_to_electrical_department'"];
+    const params = [];
+
+    if (year) { conditions.push('YEAR(t.created_at) = ?'); params.push(Number(year)); }
+    if (month) { conditions.push('MONTH(t.created_at) = ?'); params.push(Number(month)); }
+    if (district && district !== 'all') { conditions.push('rc.district = ?'); params.push(district); }
+    if (status && status !== 'all') { conditions.push('t.status = ?'); params.push(status); }
+
+    const rows = await db.query(`
+        SELECT 
+            rc.id as customer_id,
+            rc.applicant_name,
+            rc.mobile_number,
+            rc.district,
+            rc.plant_size_kw,
+            t.id as task_id,
+            t.status,
+            t.assigned_to_name,
+            t.created_at,
+            t.updated_at
+        FROM tasks t
+        JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY t.created_at DESC
+    `, params);
+
+    const summary = await db.query(`
+        SELECT 
+            rc.district,
+            COUNT(*) as total,
+            SUM(CASE WHEN t.status = 'pending' THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN t.status = 'inprogress' THEN 1 ELSE 0 END) as inprogress,
+            SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed
+        FROM tasks t
+        JOIN registered_customers rc ON t.registered_customer_id = rc.id
+        WHERE ${conditions.join(' AND ')}
+        GROUP BY rc.district
+        ORDER BY total DESC
+    `, params);
+
+    return { indents: rows, summary, total: rows.length };
+}
+
 module.exports = {
     getOverviewStats,
     getInstallationsByDistrict,
@@ -377,4 +511,7 @@ module.exports = {
     getPaymentCollectionTrend,
     getSpecialRequirements,
     getRecentActivity,
+    getPlantInstallationsDone,
+    getRegistrationsByDistrict,
+    getIndentSubmissions,
 };
