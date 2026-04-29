@@ -64,10 +64,18 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage,
     fileFilter: (req, file, cb) => {
-        if (/^image\//.test(file.mimetype) || file.mimetype === 'application/pdf') {
+        const allowedTypes = [
+            /^image\//,
+        ];
+        const allowedExact = [
+            'application/pdf',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+        if (allowedTypes.some(r => r.test(file.mimetype)) || allowedExact.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Only image and PDF files are allowed'));
+            cb(new Error('Only image, PDF, and Excel files are allowed'));
         }
     },
 });
