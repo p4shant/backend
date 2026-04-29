@@ -14,7 +14,7 @@ router.post('/punch-out', controller.punchOut);
 router.get('/customers/search', controller.searchCustomers);
 
 // ── Admin endpoints ────────────────────────────────────────────────────────
-const adminOnly = requireRoles(['Master Admin', 'SFDC Admin']);
+const adminOnly = requireRoles(['Master Admin', 'SFDC Admin', 'Help Desk']);
 router.get('/testers', adminOnly, controller.getQATesters);
 router.get('/logs', adminOnly, controller.listLogs);
 router.get('/logs/:id', adminOnly, controller.getLogDetail);
