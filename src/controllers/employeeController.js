@@ -101,11 +101,28 @@ async function changePassword(req, res) {
     }
 }
 
+async function resetPassword(req, res) {
+    try {
+        const { employee_id } = req.body;
+
+        if (!employee_id) {
+            return res.status(400).json({ message: 'employee_id is required' });
+        }
+
+        const result = await employeeService.resetPasswordToDefault(employee_id);
+        return res.json(result);
+    } catch (err) {
+        const status = err.status || 500;
+        return res.status(status).json({ message: err.message || 'Unable to reset password' });
+    }
+}
+
 module.exports = {
     listEmployees,
     getEmployeeById,
     createEmployee,
     updateEmployee,
     deleteEmployee,
-    changePassword
+    changePassword,
+    resetPassword
 };
