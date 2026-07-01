@@ -12,6 +12,7 @@ router.get('/roles', (req, res) => res.json({ roles: EMPLOYEE_ROLES }));
 
 router.get('/', employeeController.listEmployees);
 router.put('/change-password', authenticate, employeeController.changePassword);
+router.put('/reset-password', authenticate, requireRoles(['Master Admin']), employeeController.resetPassword);
 router.get('/:id', employeeController.getEmployeeById);
 router.post('/', requireRoles(adminRoles), employeeController.createEmployee);
 router.put('/:id', requireRoles(adminRoles), employeeController.updateEmployee);

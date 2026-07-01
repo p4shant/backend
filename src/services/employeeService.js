@@ -185,6 +185,26 @@ async function changePassword(id, currentPassword, newPassword) {
     return true;
 }
 
+/**
+ * Reset employee password to default (Master Admin only).
+ * Default password: "Kaman@123"
+ */
+const DEFAULT_PASSWORD = 'Kaman@123';
+
+async function resetPasswordToDefault(employeeId) {
+    const rows = await db.query('SELECT id, name, phone_number FROM employees WHERE id = ?', [employeeId]);
+    if (rows.length === 0) {
+        const err = new Error('Employee not found');
+        err.status = 404;
+        throw err;
+    }
+
+    const newPasswordHash = await hashPassword(DEFAULT_PASSWORD);
+    await db.query('UPDATE employees SET password_hash = ? WHERE id = ?', [newPasswordHash, employeeId]);
+
+    return { message: 'Password reset to default successfully', employee: rows[0] };
+}
+
 module.exports = {
     list,
     getById,
@@ -195,5 +215,6 @@ module.exports = {
     create,
     update,
     remove,
-    changePassword
+    changePassword,
+    resetPasswordToDefault
 };
